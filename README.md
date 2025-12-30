@@ -20,11 +20,11 @@
       + POI.csv坐标系从GCJ-02转换成WGS-84
       + 遍历每个小的网格，统计每个大类POI的数量，最终得到每个小网格的各种POI百分比和POI总数量。
    2. Mobility数据处理：
-      + 现在有mobility数据和poi数据，mobility包括时间（到分秒）、位置（经纬度）、userid
-      + 所有日期合并，按照user group
-      + 按照user划分训练集、验证集、测试集  
-      + 每个user得到所有的轨迹，等时间间隔离散化
-      + 每个user按照obs_len+pred_len进行滑动窗口切片，得到samples
+      + 现在有mobility数据和poi数据，mobility数据上基本包括时间（到分秒）、位置（经纬度）、userid。特别要注意的是nanchang的数据中location对应的经纬度坐标需要根据location_id再去location.csv中匹配获取经纬度坐标。
+      + 所有日期合并，按照user进行group
+      + 按照user划分训练集、验证集、测试集。就是一部分user用于测试，一部分user用于验证，一部分user用于训练  
+      + 得到每个user所有的轨迹，等时间间隔离散化。时间间隔可以是半个小时、一个小时。这个可以是手动输入的参数。例如一个user轨迹原本是：2:05 in location_1, 2:33 in location_2, 2:45 in location_3, 3:10 in location_4。如果时间间隔是30分钟，那么离散化后就是：2:00 in location_1, 2:30 in location_2, 3:00 in location_4。中间缺失的位置可以用前一个位置进行填充，或者用特殊标记表示缺失位置;如果同一个时间间隔内有多个位置点，则取第一个位置点。
+      + 离散化后，每个user按照obs_len+pred_len进行滑动窗口切片，得到samples
       + 所有samples进行检查，必须每一步都在研究空间范围内，位置由坐标系变换到对应Location_ID
       + 数据统计，调整参数
       + 需要针对不同出行方式拟合
