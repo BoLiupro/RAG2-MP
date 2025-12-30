@@ -1,4 +1,5 @@
 # China_Journal Mobility Prediction
+---
 ## 数据集
 1. 原始数据(Raw)收集：
    1. mobility：南昌app（202205）、上海信令(2024)、深圳私家车(202207)
@@ -15,5 +16,5 @@
       + 每个user按照obs_len+pred_len进行滑动窗口切片，得到samples
       + 所有samples进行检查，必须每一步都在研究空间范围内，位置由坐标系变换到对应Location_ID
       + 数据统计，调整参数
-
+---
 ## 代码框架
