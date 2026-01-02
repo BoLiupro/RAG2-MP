@@ -135,9 +135,6 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 1. LLM+RAG:利用LLM对user的历史轨迹进行编码，得到user出行模式和意图的embedding表示，再将embedding与经验池(预先整理好的sample embedding,都是对obs_len+pred_len的sample进行编码得到的)中的数据中进行embedding similarity计算，找到top-m相似的历史轨迹。将这些similar samples的历史轨迹和next location整合成一个prompt输入到LLM中，得到一个“同类型轨迹可能下一个目的地去哪里”的总结概括similary_mob_summary，用于预测辅助。这里m是一个手动输入的参数，表示选择多少个相似样本。
 2. 利用改进版的gravity model为next location的预测选择提供一些candidates。在当前位置（也就是在obs_len的最后一个时间步时user处于的位置），遍历一定范围内的grids，依据grids中的各个种类的poi数量信息，用改进版的gravity model公式:score_of_poi_A=weight*(num of category A in origin grid)/distance^2，计算每个grid中各个类型poi的score。最终得到每个poi类型下score最高的top-n grids作为candidates。这里有三个手动输入的参数，一个是引力公式的参数weight,另一个是candidates的数量n；第三个是遍历的范围radius。
 3. 综合LLM+RAG module的输出similar summary和gravity model module的输出candidate grids，进行最终的next location预测.设计一个prompt，将similar summary和candidate grids的信息整合进去，输入到LLM中，得到最终的预测结果。最终的结果是一个top-K个预测位置列表。为了减小模型参数量，RAG使用的LLM和最终预测使用的LLM是同一个模型LLM，不加载两个LLM。
-4. 评估指标：top-K accuracy, MRR等。
-5. 消融实验：变体一：不用LLM+RAG的信息(w/o RAG)；变体二：不用gravity model输出的信息(w/o Gravity)；变体三：最终不用LLM进行预测（w/o LLM Predictor).
-6. 前期准备：6.1：RAG module的经验池准备：对训练集中的所有samples进行LLM编码，得到embedding，存储下来，作为经验池；6.2:拟合gravity model的参数，选择最优的weight参数和radius参数作为实验的默认值。
 ---
 # Prompt_2.1[框架搭建：LLM+RAG模块实现]
 ## 背景
@@ -294,3 +291,46 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 
 # 训练流程 
 ---
+我现在需要设计整个模型的训练流程。主要包括以下几个部分：
+1. 数据加载：加载处理好的训练集、验证集和测试集数据。
+2. 模型初始化：初始化LLM、RAG模块和Gravity模块。主要是调用predictor.py中的MobilityPredictor类，传入相应的参数。
+3. 训练循环：对于每个epoch，遍历训练集数据，进行前向传播、计算损失、反向传播和参数更新。关于损失函数，我想先将ground truth构建成文本形式，然后利用LLM的生成输出和ground truth文本进行对比，计算交叉熵损失。RAG使用的LLM和最终预测使用的LLM是同一个模型LLM，不加载两个LLM。RAG阶段不训练LLM，只训练最终预测阶段的LLM。
+4. 验证循环：在每个epoch结束后，使用验证集数据进行模型评估，计算评估指标。评估指标包括top-K accuracy, MRR等。K取3,5,10.
+5. 测试循环：在训练完成后，使用测试集数据进行最终评估。
+6. 模型保存：保存训练好的模型参数和配置文件，便于后续加载和使用。
+7. 日志记录：记录训练过程中的损失值、评估指标等信息，便于后续分析和调试。
+8. 所有的参数通过配置文件config.yaml进行管理和传递。
+---
+# Prompt_3.2[完整训练流程实现]
+## 背景
+现在我要实现整个mobility prediction模型的训练流程。这个流程主要包括数据加载、模型初始化、训练循环、验证循环、测试循环、模型保存和日志记录等部分。
+
+## 任务
+请完成以下任务：
+1. **训练流程实现**：
+   - 编写/workspace/China_Journal/trainer/trainer.py和/workspace/China_Journal/dataset/dataset.py两个脚本文件。
+   - 在trainer.py脚本中，实现整个训练流程，包括数据加载、模型初始化、训练循环、验证循环、测试循环、模型保存和日志记录等部分。
+   - 在dataset.py脚本中，实现数据集的加载和预处理功能，确保能够正确读取处理好的训练集、验证集和测试集数据。 
+2. **损失函数设计**：
+   - 设计一个损失函数，先将ground truth构建成文本形式，然后利用LLM的生成输出和ground truth文本进行对比，计算交叉熵损失。
+3. **评估指标实现**：
+   - 实现top-K accuracy和MRR等评估指标的计算方法，K取3,5,10。
+
+## 约束
+- 使用Python编程语言。
+- 使用之前编写的MobilityPredictor类和数据处理脚本。
+- 训练的过程要有完善的进度显示和日志记录，记录训练过程中的损失值、评估指标等信息。
+- 测试阶段，日志中记录每个阶段的中间结果，包括两个阶段的prompts,rag_summary,gravity_candidates, final_predictions等，方便调试和分析。
+
+## 输出格式
+- 提交trainer.py和dataset.py脚本文件。
+- trainer.py脚本中，包括整个训练流程的实现，损失函数设计和评估指标实现。
+- dataset.py脚本中，包括数据集的加载和预处理功能。
+- 使用config.yaml文件管理和传递所有的参数。
+- 在scripts/train.sh脚本中，添加读取config.yaml文件并传递参数给trainer.py脚本的功能。
+---
+
+
+# 实验设计
+1. 消融实验：变体一：不用LLM+RAG的信息(w/o RAG)；变体二：不用gravity model输出的信息(w/o Gravity)；变体三：最终不用LLM进行预测（w/o LLM Predictor).
+2. 前期准备：6.1：RAG module的经验池准备：对训练集中的所有samples进行LLM编码，得到embedding，存储下来，作为经验池；6.2:拟合gravity model的参数，选择最优的weight参数和radius参数作为实验的默认值。

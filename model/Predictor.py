@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Tuple
 from .LLM import MobilityLLM
 from .RAG import MobilityRAG
 from .Gravity import GravityModel
-from common.utils import format_trajectory_with_distances, calculate_grid_distance, format_candidates_with_distances
+from util.utils import format_trajectory_with_distances, calculate_grid_distance, format_candidates_with_distances
 
 
 class MobilityPredictor:
@@ -343,7 +343,7 @@ class MobilityPredictor:
             Formatted prompt string
         """
         # Determine mobility mode
-        from common.utils import get_mobility_mode
+        from util.utils import get_mobility_mode
         mobility_mode = get_mobility_mode(self.city)
         
         prompt = f"You are a mobility prediction expert analyzing {mobility_mode} patterns. "

@@ -10,7 +10,7 @@ from peft import get_peft_model, LoraConfig, TaskType
 from typing import List, Dict, Any, Tuple
 import numpy as np
 from datetime import datetime
-from common.utils import format_trajectory_with_distances, get_mobility_mode, calculate_grid_distance
+from util.utils import format_trajectory_with_distances, get_mobility_mode, calculate_grid_distance
 
 
 class MobilityLLM:
@@ -396,7 +396,7 @@ class MobilityLLM:
             List of (location_id, confidence_score) tuples
         """
         # Build prediction prompt
-        from common.utils import get_mobility_mode
+        from util.utils import get_mobility_mode
         mobility_mode = get_mobility_mode(city)
         
         prompt = f"You are predicting the next location for {mobility_mode}.\n\n"

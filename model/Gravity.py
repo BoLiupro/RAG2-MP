@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from typing import List, Dict, Tuple, Optional
 import os
-from common.utils import calculate_grid_distance, grid_id_to_coordinates, coordinates_to_grid_id
+from util.utils import calculate_grid_distance, grid_id_to_coordinates, coordinates_to_grid_id
 
 
 class GravityModel:

@@ -12,7 +12,7 @@ import faiss
 from typing import List, Dict, Any, Tuple
 from tqdm import tqdm
 from .LLM import MobilityLLM
-from common.utils import format_trajectory_with_distances, calculate_grid_distance, format_candidates_with_distances
+from util.utils import format_trajectory_with_distances, calculate_grid_distance, format_candidates_with_distances
 
 
 class MobilityRAG:
@@ -280,7 +280,7 @@ class MobilityRAG:
         Returns:
             LLM-generated summary text with pattern analysis
         """
-        from common.utils import get_mobility_mode
+        from util.utils import get_mobility_mode
         
         # Group samples by next location for statistical analysis
         location_groups = {}
