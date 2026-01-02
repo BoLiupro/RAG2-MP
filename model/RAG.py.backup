@@ -1,23 +1,21 @@
 """
-RAG Module for Mobility Prediction with FAISS
+RAG Module for Mobility Prediction
 This module implements the Retrieval-Augmented Generation workflow for mobility trajectory analysis.
-Uses FAISS for efficient similarity search.
 """
 
 import numpy as np
 import torch
 import pickle
 import os
-import faiss
 from typing import List, Dict, Any, Tuple
-from tqdm import tqdm
+from sklearn.metrics.pairwise import cosine_similarity
 from .LLM import MobilityLLM
 
 
 class MobilityRAG:
     """
     Retrieval-Augmented Generation module for mobility prediction.
-    Retrieves similar historical trajectories and generates summaries using FAISS.
+    Retrieves similar historical trajectories and generates summaries.
     """
     
     def __init__(
@@ -25,8 +23,7 @@ class MobilityRAG:
         llm: MobilityLLM,
         rag_database_path: str = "/workspace/China_Journal/model/rag_database",
         top_m: int = 5,
-        city: str = "general",
-        verbose: bool = False
+        city: str = "general"
     ):
         """
         Initialize the Mobility RAG module.
@@ -36,48 +33,25 @@ class MobilityRAG:
             rag_database_path: Path to the RAG database directory
             top_m: Number of top similar samples to retrieve
             city: City name for the dataset
-            verbose: If True, print prompts sent to LLM
         """
         self.llm = llm
         self.rag_database_path = rag_database_path
         self.top_m = top_m
         self.city = city
-        self.verbose = verbose
         
         # Placeholders for RAG database
         self.database_embeddings = None
         self.database_samples = None
         self.poi_data = None
-        self.faiss_index = None
         
         print(f"Initialized MobilityRAG for {city}")
         print(f"RAG database path: {rag_database_path}")
         print(f"Retrieving top-{top_m} similar samples")
-        print(f"Verbose mode: {verbose}")
-    
-    def _build_faiss_index(self):
-        """
-        Build FAISS index from database embeddings.
-        Uses Inner Product (IP) index since embeddings are normalized.
-        For normalized vectors, inner product = cosine similarity.
-        """
-        if self.database_embeddings is None:
-            raise ValueError("Database embeddings not loaded")
-        
-        dimension = self.database_embeddings.shape[1]
-        
-        # Use IndexFlatIP for exact search with inner product (cosine similarity for normalized vectors)
-        self.faiss_index = faiss.IndexFlatIP(dimension)
-        
-        # Add embeddings to index
-        self.faiss_index.add(self.database_embeddings.astype('float32'))
-        
-        print(f"Built FAISS index with {self.faiss_index.ntotal} vectors")
     
     def load_rag_database(self, embedding_file: str = "embeddings.npy", 
                           samples_file: str = "samples.pkl"):
         """
-        Load the pre-computed RAG database with FAISS index.
+        Load the pre-computed RAG database.
         
         Args:
             embedding_file: Filename for the embeddings array
@@ -85,7 +59,6 @@ class MobilityRAG:
         """
         embedding_path = os.path.join(self.rag_database_path, self.city, embedding_file)
         samples_path = os.path.join(self.rag_database_path, self.city, samples_file)
-        faiss_index_path = os.path.join(self.rag_database_path, self.city, "faiss_index.bin")
         
         if not os.path.exists(embedding_path):
             print(f"Warning: RAG database not found at {embedding_path}")
@@ -102,17 +75,6 @@ class MobilityRAG:
         with open(samples_path, 'rb') as f:
             self.database_samples = pickle.load(f)
         print(f"Loaded {len(self.database_samples)} samples")
-        
-        # Load or build FAISS index
-        if os.path.exists(faiss_index_path):
-            self.faiss_index = faiss.read_index(faiss_index_path)
-            print(f"Loaded FAISS index from {faiss_index_path}")
-        else:
-            print(f"Building FAISS index...")
-            self._build_faiss_index()
-            # Save FAISS index
-            faiss.write_index(self.faiss_index, faiss_index_path)
-            print(f"Saved FAISS index to {faiss_index_path}")
         
         return True
     
@@ -149,54 +111,42 @@ class MobilityRAG:
         print(f"Loaded POI data for {len(self.poi_data)} locations")
         return True
     
-    def compute_similarity(
-        self,
-        query_embedding: np.ndarray,
-        top_k: int = None
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    def compute_similarity(self, query_embedding: np.ndarray) -> np.ndarray:
         """
-        Compute similarity using FAISS for efficient search.
+        Compute cosine similarity between query and all database embeddings.
         
         Args:
-            query_embedding: Query embedding (normalized)
-            top_k: Number of top results to return (if None, use self.top_m)
+            query_embedding: Query trajectory embedding
         
         Returns:
-            Tuple of (similarities, indices) for top-k matches
+            Array of similarity scores
         """
-        if self.faiss_index is None:
-            raise ValueError("FAISS index not built. Load RAG database first.")
-        
-        if top_k is None:
-            top_k = self.top_m
+        if self.database_embeddings is None:
+            raise ValueError("RAG database not loaded. Call load_rag_database() first.")
         
         # Reshape query embedding if needed
         if query_embedding.ndim == 1:
             query_embedding = query_embedding.reshape(1, -1)
         
-        # FAISS search (returns distances and indices)
-        # For normalized vectors with IndexFlatIP, distance = cosine similarity
-        similarities, indices = self.faiss_index.search(
-            query_embedding.astype('float32'),
-            top_k
-        )
+        # Compute cosine similarity
+        similarities = cosine_similarity(query_embedding, self.database_embeddings)
         
-        return similarities[0], indices[0]
+        return similarities.flatten()
     
     def retrieve_similar_samples(
         self,
         query_trajectory: List[Dict[str, Any]],
         top_m: int = None
-    ) -> Tuple[List[Dict[str, Any]], np.ndarray, np.ndarray]:
+    ) -> Tuple[List[Dict[str, Any]], np.ndarray]:
         """
-        Retrieve top-m similar samples from the RAG database using FAISS.
+        Retrieve top-m similar samples from the RAG database.
         
         Args:
             query_trajectory: The query trajectory to find similar samples for
             top_m: Number of top samples to retrieve (uses self.top_m if None)
         
         Returns:
-            Tuple of (similar_samples, similarity_scores, indices)
+            Tuple of (similar_samples, similarity_scores)
         """
         if top_m is None:
             top_m = self.top_m
@@ -208,19 +158,22 @@ class MobilityRAG:
             city=self.city
         )
         
-        # Use FAISS for efficient similarity search
-        similarities, indices = self.compute_similarity(query_embedding, top_k=top_m)
+        # Compute similarities
+        similarities = self.compute_similarity(query_embedding)
+        
+        # Get top-m indices
+        top_indices = np.argsort(similarities)[-top_m:][::-1]
+        top_similarities = similarities[top_indices]
         
         # Retrieve corresponding samples
-        similar_samples = [self.database_samples[idx] for idx in indices]
+        similar_samples = [self.database_samples[idx] for idx in top_indices]
         
-        return similar_samples, similarities, indices
+        return similar_samples, top_similarities
     
     def generate_rag_summary(
         self,
         query_trajectory: List[Dict[str, Any]],
-        top_m: int = None,
-        print_prompt: bool = None
+        top_m: int = None
     ) -> Tuple[str, List[Dict[str, Any]], np.ndarray]:
         """
         Complete RAG workflow: retrieve similar samples and generate summary.
@@ -228,32 +181,26 @@ class MobilityRAG:
         Args:
             query_trajectory: The query trajectory (observation)
             top_m: Number of top samples to retrieve
-            print_prompt: If True, print the prompt sent to LLM (overrides self.verbose)
         
         Returns:
             Tuple of (summary_text, similar_samples, similarity_scores)
         """
-        # Use verbose setting if print_prompt not specified
-        if print_prompt is None:
-            print_prompt = self.verbose
-        
-        # Retrieve similar samples using FAISS
-        similar_samples, similarities, indices = self.retrieve_similar_samples(
+        # Retrieve similar samples
+        similar_samples, similarities = self.retrieve_similar_samples(
             query_trajectory, top_m
         )
         
-        print(f"\nRetrieved {len(similar_samples)} similar samples (using FAISS):")
-        for i, (sample, sim, idx) in enumerate(zip(similar_samples, similarities, indices), 1):
+        print(f"\nRetrieved {len(similar_samples)} similar samples:")
+        for i, (sample, sim) in enumerate(zip(similar_samples, similarities), 1):
             next_loc = sample.get('next_location', 'unknown')
-            print(f"  {i}. Similarity: {sim:.4f}, Next location: {next_loc}, Index: {idx}")
+            print(f"  {i}. Similarity: {sim:.4f}, Next location: {next_loc}")
         
         # Generate summary using LLM
         summary = self.llm.generate_similarity_summary(
             query_trajectory=query_trajectory,
             similar_samples=similar_samples,
             poi_data=self.poi_data,
-            city=self.city,
-            print_prompt=print_prompt
+            city=self.city
         )
         
         return summary, similar_samples, similarities
@@ -265,8 +212,8 @@ class MobilityRAG:
         batch_size: int = 32
     ):
         """
-        Build the RAG database from training samples with FAISS index.
-        This method encodes all training samples and saves embeddings and FAISS index.
+        Build the RAG database from training samples.
+        This method encodes all training samples and saves embeddings.
         
         Args:
             training_samples: List of training trajectory samples
@@ -288,6 +235,7 @@ class MobilityRAG:
         embeddings = []
         
         # Encode all samples
+        from tqdm import tqdm
         for i in tqdm(range(0, len(training_samples), batch_size), desc="Encoding samples"):
             batch_samples = training_samples[i:i + batch_size]
             
@@ -319,14 +267,6 @@ class MobilityRAG:
         self.database_embeddings = embeddings
         self.database_samples = training_samples
         
-        # Build and save FAISS index
-        print(f"\nBuilding FAISS index...")
-        self._build_faiss_index()
-        
-        faiss_index_path = os.path.join(output_dir, "faiss_index.bin")
-        faiss.write_index(self.faiss_index, faiss_index_path)
-        print(f"Saved FAISS index to {faiss_index_path}")
-        
         print(f"{'='*70}")
         print("RAG database built successfully!")
         print(f"{'='*70}\n")
@@ -343,8 +283,7 @@ class MobilityRAG:
             'embedding_dim': self.database_embeddings.shape[1] if self.database_embeddings is not None else 0,
             'city': self.city,
             'top_m': self.top_m,
-            'poi_locations': len(self.poi_data) if self.poi_data else 0,
-            'faiss_index_size': self.faiss_index.ntotal if self.faiss_index else 0
+            'poi_locations': len(self.poi_data) if self.poi_data else 0
         }
         return stats
     
@@ -359,5 +298,4 @@ class MobilityRAG:
         print(f"Embedding dimension: {stats['embedding_dim']}")
         print(f"Top-M retrieval: {stats['top_m']}")
         print(f"POI locations: {stats['poi_locations']}")
-        print(f"FAISS index size: {stats['faiss_index_size']}")
         print(f"{'='*50}\n")

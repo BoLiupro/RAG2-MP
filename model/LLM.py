@@ -232,7 +232,8 @@ class MobilityLLM:
         similar_samples: List[Dict[str, Any]],
         poi_data: Dict[int, Dict[str, float]] = None,
         city: str = "general",
-        max_length: int = 256
+        max_length: int = 256,
+        print_prompt: bool = False
     ) -> str:
         """
         Generate a summary based on similar trajectory samples.
@@ -243,6 +244,7 @@ class MobilityLLM:
             poi_data: POI features for locations
             city: City name
             max_length: Maximum generation length
+            print_prompt: If True, print the prompt sent to LLM
         
         Returns:
             Generated summary text
@@ -275,6 +277,14 @@ class MobilityLLM:
             prompt += f"  Pattern {idx}: [...{', '.join(traj_locs)}] → Next: Location {next_loc}\n"
         
         prompt += "\nBased on these patterns, summarize the likely next destination:"
+        
+        # Print prompt if requested
+        if print_prompt:
+            print(f"\n{'='*70}")
+            print("PROMPT SENT TO LLM (RAG Summary Generation):")
+            print(f"{'='*70}")
+            print(prompt)
+            print(f"{'='*70}\n")
         
         # Tokenize and generate
         inputs = self.tokenizer(

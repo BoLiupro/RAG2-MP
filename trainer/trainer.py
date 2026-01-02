@@ -11,6 +11,8 @@ import pandas as pd
 import numpy as np
 from model.LLM import MobilityLLM
 from model.RAG import MobilityRAG
+from model.Gravity import GravityModel
+from model.Predictor import MobilityPredictor
 from typing import List, Dict, Any
 from datetime import datetime
 
@@ -134,7 +136,8 @@ def test_rag_initialization(llm: MobilityLLM, city: str = 'beijing'):
             llm=llm,
             rag_database_path="/workspace/China_Journal/model/rag_database",
             top_m=5,
-            city=city
+            city=city,
+            verbose=True  # Enable verbose mode for prompt printing
         )
         print("✓ RAG module initialized successfully")
         return rag
@@ -254,6 +257,87 @@ def test_next_location_prediction(llm: MobilityLLM, rag_summary: str = None):
         return None
 
 
+def test_gravity_model(city: str = 'beijing'):
+    """Test Gravity Model for candidate location selection."""
+    print("\n" + "="*70)
+    print("TEST 7: Gravity Model - Candidate Location Selection")
+    print("="*70)
+    
+    # POI data path
+    poi_data_path = f"/workspace/China_Journal/raw_data/{city}/{city}_grid_poi.csv"
+    
+    if not os.path.exists(poi_data_path):
+        print(f"✗ POI data not found at {poi_data_path}")
+        return None
+    
+    try:
+        # Initialize Gravity Model
+        gravity_model = GravityModel(
+            poi_data_path=poi_data_path,
+            city=city,
+            weight=1.0,
+            top_n=5,
+            radius=10
+        )
+        
+        print("✓ Gravity Model initialized successfully")
+        gravity_model.print_statistics()
+        
+        # Test with a sample current location
+        current_location = 800  # Middle of the grid (approximately)
+        
+        print(f"\nTesting with current location: Grid {current_location}")
+        
+        # Get candidates for each POI category
+        candidates_by_category = gravity_model.get_candidate_locations(
+            current_grid_id=current_location,
+            return_scores=True
+        )
+        
+        # Print candidates for a few categories
+        print(f"\nCandidates by POI Category (each category has top-{gravity_model.top_n} candidates):")
+        sample_categories = ['Dining & Cusine_count', 'Shopping & Consumer Goods_count', 'Transportation Facilities_count']
+        
+        for category in sample_categories:
+            if category in candidates_by_category:
+                category_display = category.replace('_count', '')
+                print(f"\n{category_display}:")
+                for i, (grid_id, score) in enumerate(candidates_by_category[category][:3], 1):
+                    print(f"  {i}. Grid {grid_id} - Score: {score:.4f}")
+        
+        print(f"\n✓ Generated {len(candidates_by_category)} POI category groups")
+        print(f"  Each category has top-{gravity_model.top_n} candidates")
+        print(f"  Total POI categories: {len(candidates_by_category)}")
+        
+        # Get top-k overall candidates
+        print(f"\nTop-10 Overall Candidates (by average score):")
+        top_k_candidates = gravity_model.get_top_k_candidates(
+            current_grid_id=current_location,
+            k=10
+        )
+        
+        for i, (grid_id, avg_score) in enumerate(top_k_candidates, 1):
+            row, col = gravity_model._grid_id_to_coordinates(grid_id)
+            print(f"  {i}. Grid {grid_id} (row={row}, col={col}) - Avg Score: {avg_score:.4f}")
+        
+        # Get all unique candidates
+        all_candidates = gravity_model.get_all_candidate_locations(
+            current_grid_id=current_location,
+            deduplicate=True
+        )
+        
+        print(f"\n✓ Gravity Model test successful")
+        print(f"Total unique candidates across all POI categories: {len(all_candidates)}")
+        
+        return gravity_model
+        
+    except Exception as e:
+        print(f"✗ Gravity Model test failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
 def main():
     """Main function to run all tests."""
     print("\n" + "="*70)
@@ -296,9 +380,148 @@ def main():
     # Test 6: Next location prediction
     test_next_location_prediction(llm, rag_summary)
     
+    # Test 7: Gravity Model
+    gravity_model = test_gravity_model(city=city)
+    
+    # Test 8: Integrated Prediction (LLM + RAG + Gravity)
+    if rag_summary and gravity_model and rag.database_embeddings is not None:
+        test_integrated_prediction(llm, rag, gravity_model, city=city)
+    
+    # Test 9: MobilityPredictor (Complete Pipeline)
+    test_mobility_predictor(city=city)
+    
     print("\n" + "="*70)
     print("All tests completed!")
     print("="*70 + "\n")
+
+
+def test_integrated_prediction(llm: MobilityLLM, rag: MobilityRAG, gravity_model: GravityModel, city: str = 'beijing'):
+    """Test integrated prediction combining LLM+RAG and Gravity Model."""
+    print("\n" + "="*70)
+    print("TEST 8: Integrated Prediction (LLM + RAG + Gravity)")
+    print("="*70)
+    
+    # Sample query trajectory
+    query_trajectory = [
+        {'location_id': 780, 'timestamp': '20220706 08:00'},
+        {'location_id': 781, 'timestamp': '20220706 08:30'},
+        {'location_id': 800, 'timestamp': '20220706 09:00'},
+    ]
+    
+    current_location = query_trajectory[-1]['location_id']
+    
+    print(f"\nQuery Trajectory:")
+    for i, step in enumerate(query_trajectory, 1):
+        print(f"  Step {i}: Grid {step['location_id']} at {step['timestamp']}")
+    
+    try:
+        # Step 1: Get RAG summary
+        print(f"\nStep 1: Retrieving similar trajectories from RAG database...")
+        rag_summary, similar_samples, similarities = rag.generate_rag_summary(
+            query_trajectory=query_trajectory,
+            top_m=3
+        )
+        
+        print(f"✓ Retrieved {len(similar_samples)} similar trajectories")
+        print(f"  Top similarity score: {similarities[0]:.4f}")
+        
+        # Step 2: Get candidate locations from Gravity Model
+        print(f"\nStep 2: Computing candidate locations using Gravity Model...")
+        print(f"  Current location: Grid {current_location}")
+        
+        # Get top-k candidates from gravity model
+        gravity_candidates = gravity_model.get_top_k_candidates(
+            current_grid_id=current_location,
+            k=20
+        )
+        
+        candidate_locations = [grid_id for grid_id, score in gravity_candidates]
+        
+        print(f"✓ Generated {len(candidate_locations)} candidate locations")
+        print(f"  Top-5 candidates: {candidate_locations[:5]}")
+        
+        # Step 3: Final prediction combining RAG summary and gravity candidates
+        print(f"\nStep 3: Final prediction combining RAG summary and candidates...")
+        
+        predictions = llm.predict_next_location(
+            query_trajectory=query_trajectory,
+            candidate_locations=candidate_locations,
+            rag_summary=rag_summary,
+            city=city,
+            top_k=5
+        )
+        
+        print(f"\n✓ Integrated prediction successful!")
+        print(f"\nFinal Top-5 Predictions:")
+        for i, (loc_id, confidence) in enumerate(predictions, 1):
+            row, col = gravity_model._grid_id_to_coordinates(loc_id)
+            # Find if this was in gravity top candidates
+            gravity_rank = next((idx for idx, (gid, _) in enumerate(gravity_candidates, 1) if gid == loc_id), None)
+            gravity_info = f"(Gravity rank: {gravity_rank})" if gravity_rank else "(Not in gravity top-20)"
+            print(f"  {i}. Grid {loc_id} (row={row}, col={col}) - Confidence: {confidence:.4f} {gravity_info}")
+        
+        return predictions
+        
+    except Exception as e:
+        print(f"✗ Integrated prediction failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+def test_mobility_predictor(city: str = 'beijing'):
+    """Test the complete MobilityPredictor pipeline."""
+    print("\n" + "="*70)
+    print("TEST 9: MobilityPredictor (Complete Pipeline)")
+    print("="*70)
+    
+    try:
+        # Initialize MobilityPredictor with all modules
+        predictor = MobilityPredictor(
+            llm_model_name="Deepseek-R1-Distill-Qwen-3B",
+            llm_model_path="/datadisk",
+            rag_database_path="/workspace/China_Journal/model/rag_database",
+            city=city,
+            top_k=5,
+            top_m=3,
+            top_n=5,
+            gravity_weight=1.0,
+            gravity_radius=10,
+            use_quantization=True,
+            verbose=True
+        )
+        
+        print("\n✓ MobilityPredictor initialized successfully")
+        
+        # Print statistics
+        predictor.print_statistics()
+        
+        # Test prediction with sample trajectory
+        print("\nTesting prediction with sample trajectory...")
+        
+        sample_trajectory = [
+            {'location_id': 780, 'timestamp': '20220706 08:00'},
+            {'location_id': 781, 'timestamp': '20220706 08:30'},
+            {'location_id': 800, 'timestamp': '20220706 09:00'},
+        ]
+        
+        ground_truth = 802  # Sample ground truth
+        
+        predictions, results = predictor.predict(
+            observation_trajectory=sample_trajectory,
+            ground_truth=ground_truth,
+            print_prompt=True
+        )
+        
+        print("\n✓ Prediction completed successfully")
+        
+        return predictor
+        
+    except Exception as e:
+        print(f"✗ MobilityPredictor test failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
 if __name__ == "__main__":

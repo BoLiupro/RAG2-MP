@@ -31,7 +31,7 @@
       + 数据统计，调整参数
       + 需要针对不同出行方式拟合gravity model的分母
 ---
-# Prompt_1.1[数据处理1]
+# Prompt_1.1[POI数据处理]
 ## 背景
 现在要对POI数据和用户的出行轨迹数据进行处理和分析，以便为后续的出行预测任务做准备。POI数据包含了不同类型的兴趣点信息，而出行轨迹数据记录了用户在不同时间点的位置变化。通过对这些数据的处理，可以提取出有用的特征，帮助我们更好地理解用户的出行行为模式。
 研究空间范围均为正方形空间，具体左下和右上顶点如下：
@@ -60,7 +60,7 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 有适当的注释和过程打印
 
 ---
-# Prompt_1.2[数据处理2]   
+# Prompt_1.2[Mobility数据处理]   
 ## 背景
 现在要对用户的出行轨迹数据进行处理和分析，以便为后续的出行预测任务做准备。出行轨迹数据记录了用户在不同时间点的位置变化。通过对这些数据的处理，可以提取出有用的特征，帮助我们更好地理解用户的出行行为模式。我已经对研究空间范围进行了网格划分并编号，每个网格的poi信息也已经统计好了。现在有三个城市的用户出行轨迹数据，分别是南昌、上海和深圳。mobility数据上基本包括时间（到分秒）、位置（经纬度）、userid，已经基于WGS-84。特别要注意的是nanchang的数据中location对应的经纬度坐标需要根据location_id再去location.csv中匹配获取经纬度坐标。
 
@@ -187,4 +187,50 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 提交一个Python脚本文件，命名为Gravity.py。
 - 所有的类用大写开头驼峰命名法，函数和变量用小写字母加下划线命名法。
 - 提交的Gravity.py脚本中，包括接收当前位置和POI数据，计算各个网格POI得分，选择top-n候选位置的函数。输入参数包括weight参数、候选位置数量n、遍历范围radius等。
+---
+
+## Prompt_2.3 [当前RAG+Gravity功能检查与修改]
+## 背景
+现在写的LLM+RAG和Gravity模块基本上正确且可以运行了。但是有一些地方我觉得不太对，需要修改。现在有以下几个问题：
+1、Gravity模块最后的输出，现在是把所有poi类别合并在一起，选出了top-n个候选位置。但是我想要的是针对每个poi类别，分别选出top-n个候选位置。也就是说，如果有14个poi类别，最终的输出应该是14组top-n候选位置，每组对应一个poi类别。这样LLM在结合similar summary分析了user的mobility的意图之后，可以针对不同的poi类别，选择不同的候选位置进行预测。
+2、LLM+RAG模块中，embedding相似度计算的部分，现在是直接计算输入轨迹embedding和经验池中所有样本的embedding之间的余弦相似度。这样计算量比较大，效率不高。我想要改成使用faiss库来进行相似度计算。faiss是一个高效的相似度搜索库，可以大大提升相似度计算的效率。需要把经验池中的embedding存储成faiss索引，然后使用faiss进行相似度搜索，找到top-m相似样本。
+3.现在在测试的过程中，我想吧输入给LLM的prompt打印出来，看看具体是什么内容。这样可以帮助我调试和优化prompt设计。
+
+## 任务
+请完成以下任务：
+1. **Gravity模块修改**：
+   - 修改Gravity.py脚本中的输出部分，使其针对每个POI类别，分别选出top-n个候选位置。
+2. **LLM+RAG模块修改**：
+   - 修改RAG.py脚本中的相似度计算部分，使用faiss库进行相似度搜索，找到top-m相似样本。
+   - 在RAG.py脚本中，添加打印输入给LLM的prompt的功能。
+
+
+---
+# Prompt_2.4[框架搭建：最终预测模块实现]
+## 背景
+我想写一个py类，来实现整个流程的控制。这个类的主要功能是综合利用LLM+RAG模块和改进版Gravity Model模块，并最终使用LLM进行最终的下一个位置预测。具体来说，这个类需要完成以下几个步骤：
+1. 接收用户的历史轨迹数据（obs）作为输入。
+2. 调用LLM+RAG模块，获取“同类型轨迹可能下一个目的地去哪里”的总结概括summary。
+3. 调用改进版Gravity Model模块，获取每个POI类别下的top-n候选位置candidates。
+4. 设计一个合适的prompt，将summary和candidates的信息整合进去，输入到LLM中，得到最终的预测结果。
+
+## 任务
+请完成以下任务：
+1. **最终预测模块实现**：
+   - 编写一个Python类，命名为MobilityPredictor。
+   - 在类的初始化方法中，加载LLM、RAG模块和改进版Gravity Model模块。
+   - 编写一个方法，接受用户的历史轨迹数据（obs）作为输入，调用LLM+RAG模块获取summary，调用Gravity Model模块获取candidates。
+   - 设计一个合适的prompt，将summary和candidates的信息整合进去，输入到LLM中（原先已经加载，只不过现在任务不同），得到最终的预测结果。
+
+## 约束
+- 使用Python编程语言。
+- 使用之前编写的LLM.py, RAG.py和Gravity.py脚本中的类和函数。
+- 先专注于框架的搭建，训练流程、损失函数等部分后续再完善。临时性的测试流程可以先写在/workspace/China_Journal/trainer/trainer.py
+- 输入参数包括obs数据、top-K预测位置、RAG中的similar sample的数量、gravity的radius等所有模块中我之前提到过需要手动设置的参数，都要先输入给MobilityPredictor类,再由MobilityPredictor类传递给各个子模块。
+
+## 输出格式
+- 提交一个Python脚本文件，命名为MobilityPredictor.py。
+- 所有的类用大写开头驼峰命名法，函数和变量用小写字母加下划线命名法。
+- 提交的MobilityPredictor.py脚本中，包括MobilityPredictor类的定义和实现。输入参数包括obs数据、top-K预测位置、RAG中的similar sample的数量、gravity的radius等所有模块中我之前提到过需要手动设置的参数。
+- 最终利用LLM进行预测的prompt和回答也要打印出来，方便调试和优化prompt设计。
 ---
