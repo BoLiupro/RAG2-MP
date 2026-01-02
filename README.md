@@ -133,18 +133,34 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 我这个项目解决的问题是human mobility prediction,即根据user历史轨迹来预测下一步出现的位置。数学公式定义是：input包括user的历史轨迹S={s_1,s_2,...,s_i},每个s_i=(li,ti)，表示在时间ti出现在grid li (li是spatial identifier)位置上。output是下一个时间点t_(i+1)出现的位置l_(i+1)。我的method主要是将LLM和改进版的garvity model结合起来进行预测。主要包含三个module：
 1. LLM+RAG:利用LLM对user的历史轨迹进行编码，得到user出行模式和意图的embedding表示，再将embedding与经验池(预先整理好的sample embedding,都是对obs_len+pred_len的sample进行编码得到的)中的数据中进行embedding similarity计算，找到top-m相似的历史轨迹。将这些similar samples的历史轨迹和next location整合成一个prompt输入到LLM中，得到一个“同类型轨迹可能下一个目的地去哪里”的总结概括similary_mob_summary，用于预测辅助。这里m是一个手动输入的参数，表示选择多少个相似样本。
 2. 利用改进版的gravity model为next location的预测选择提供一些candidates。在当前位置（也就是在obs_len的最后一个时间步时user处于的位置），遍历一定范围内的grids，依据grids中的各个种类的poi数量信息，用改进版的gravity model公式:score_of_poi_A=weight*(num of category A in origin grid)/distance^2，计算每个grid中各个类型poi的score。最终得到每个poi类型下score最高的top-n grids作为candidates。这里有三个手动输入的参数，一个是引力公式的参数weight,另一个是candidates的数量n；第三个是遍历的范围radius。
-3. 综合LLM+RAG module的输出similar summary和gravity model module的输出candidate grids，进行最终的next location预测.设计一个prompt，将similar summary和candidate grids的信息整合进去，输入到LLM中，得到最终的预测结果。最终的结果是一个top-K个预测位置列表。
+3. 综合LLM+RAG module的输出similar summary和gravity model module的输出candidate grids，进行最终的next location预测.设计一个prompt，将similar summary和candidate grids的信息整合进去，输入到LLM中，得到最终的预测结果。最终的结果是一个top-K个预测位置列表。为了减小模型参数量，RAG使用的LLM和最终预测使用的LLM是同一个模型LLM，不加载两个LLM。
 4. 评估指标：top-K accuracy, MRR等。
 5. 消融实验：变体一：不用LLM+RAG的信息(w/o RAG)；变体二：不用gravity model输出的信息(w/o Gravity)；变体三：最终不用LLM进行预测（w/o LLM Predictor).
 6. 前期准备：6.1：RAG module的经验池准备：对训练集中的所有samples进行LLM编码，得到embedding，存储下来，作为经验池；6.2:拟合gravity model的参数，选择最优的weight参数和radius参数作为实验的默认值。
 ---
-# Prompt_2.1[方法实现:LLM+RAG模块]
+# Prompt_2.1[框架搭建：LLM+RAG模块实现]
 ## 背景
-在出行预测任务中，利用用户的历史轨迹数据来预测其未来的位置是一个关键问题。为了提升预测的准确性，我们计划结合大语言模型（LLM）和检索增强生成（RAG）技术。通过对用户历史轨迹进行编码，并与预先整理好的经验池进行相似性计算，我们可以为预测任务提供有价值的辅助信息。
+现在我要搭建LLM+RAG模块的代码框架。这个模块的主要功能是利用大语言模型(LLM)对用户的历史轨迹进行编码，生成embedding表示。然后将这些embedding与预先整理好的经验池中的数据进行相似度计算，找到top-m相似的历史轨迹。最后将这些相似样本的历史轨迹和下一个位置整合成一个prompt，输入到LLM中，得到一个“同类型轨迹可能下一个目的地去哪里”的总结概括，用于预测辅助。
 
 ## 任务
 请完成以下任务：
 1. **LLM+RAG模块实现**：
-   - 编写一个Python函数，接受用户的历史轨迹数据作为输入。
-   - 加载本地的大预言模型，位置在/datadisk/Deepseek-R1-Distill-Qwen-3B.
-   - 利用LLM对用户的历史轨迹进行编码，生成embedding表示。
+   - 编写一个Python函数，接受用户的历史轨迹数据（obs）作为输入。
+   - 加载本地的大预言模型，位置在/datadisk/{LLM Backbone},例如Deepseek-R1-Distill-Qwen-3B.
+   - 基于历史轨迹上下文（包括location地点、poi信息、时间），构建一个合适的prompt（beijing和nanchang数据集是手机信令和gps，没有侧重的出行方式，但shenzhen都是私家车的轨迹，表明是基于私家车出行的移动方式），利用LLM对用户的历史轨迹进行编码，生成embedding表示。
+   - 加载预先整理好的经验池数据，这些数据已经经过LLM编码，存储在指定路径:/workspace/China_Journal/model/rag_database。
+   - 计算输入历史轨迹的embedding与经验池中所有样本的embedding之间的余弦相似度，找到top-m相似的历史轨迹样本。
+   - 将这些相似样本的历史轨迹和下一个位置整合成一个prompt，输入到LLM中，得到一个“同类型轨迹可能下一个目的地去哪里”的总结概括，用于预测辅助。
+
+## 约束
+- 使用Python编程语言。
+- 使用from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig等库加载、量化和使用LLM。
+- 使用from peft import get_peft_model, LoraConfig, TaskType微调模型。
+- 先专注于框架的搭建，训练流程、损失函数、RAG库的建立等部分后续再完善。临时性的测试流程可以先写在/workspace/China_Journal/trainer/trainer.py
+- 输出的summary是text。
+
+## 输出格式
+- 提交两个Python脚本文件，一个是RAG.py用于走rag的流程，一个LLm.py用于初始化LLM和利用LLM进行推理。这个LLM.py涉及RAG和最终预测模块，不是两个独立的LLM。
+- 所有的类用大写开头驼峰命名法，函数和变量用小写字母加下划线命名法。
+- 提交的LLM.py脚本中，包括建立加载LLM、编码轨迹得到embedding的函数、接收similar samples并生成summary输出的函数。输入参数包括LLM名（例如Deepseek-R1-Distill-Qwen-3B）、LLM维度相关参数等。
+- 提交RAG.py脚本中，包括接收obs，调用LLM编码得到embedding，计算相似度，找到top-m相似样本，调用LLM生成summary的函数。输入参数包括经验池路径、top-m参数等。
