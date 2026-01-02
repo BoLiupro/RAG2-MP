@@ -164,3 +164,27 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 所有的类用大写开头驼峰命名法，函数和变量用小写字母加下划线命名法。
 - 提交的LLM.py脚本中，包括建立加载LLM、编码轨迹得到embedding的函数、接收similar samples并生成summary输出的函数。输入参数包括LLM名（例如Deepseek-R1-Distill-Qwen-3B）、LLM维度相关参数等。
 - 提交RAG.py脚本中，包括接收obs，调用LLM编码得到embedding，计算相似度，找到top-m相似样本，调用LLM生成summary的函数。输入参数包括经验池路径、top-m参数等。
+---
+
+# Prompt_2.2[框架搭建：改进版Gravity Model模块实现]
+## 背景
+现在我要搭建改进版Gravity Model模块的代码框架。这个模块的主要功能是利用改进版的重力模型为下一个位置的预测选择一些候选位置。在当前位置，遍历一定范围内的网格，依据网格中的各个种类的POI数量信息，计算每个网格中各个类型POI的得分。最终得到每个POI类型下得分最高的top-n网格作为候选位置。
+
+## 任务
+请完成以下任务：
+1. **改进版Gravity Model模块实现**：
+   - 编写一个Python函数，接受用户的当前位置信息（当前位置所在的网格ID）和POI数据作为输入。
+   - 遍历当前位置一定范围内的网格，依据网格中的各个种类的POI数量信息，计算每个网格中各个类型POI的得分，使用改进版的重力模型公式:score_of_poi_A=weight*(num of category A in origin grid)/distance^2。
+   - 最终得到每个POI类型下得分最高的top-n网格作为候选位置。
+
+## 约束
+- 使用Python编程语言。
+- 使用pandas和numpy等常用数据处理库。
+- 先专注于框架的搭建，训练流程、损失函数等部分后续再完善。临时性的测试流程可以先写在/workspace/China_Journal/trainer/trainer.py
+- 输入参数包括weight参数、候选位置数量n、遍历范围radius等。
+
+## 输出格式
+- 提交一个Python脚本文件，命名为Gravity.py。
+- 所有的类用大写开头驼峰命名法，函数和变量用小写字母加下划线命名法。
+- 提交的Gravity.py脚本中，包括接收当前位置和POI数据，计算各个网格POI得分，选择top-n候选位置的函数。输入参数包括weight参数、候选位置数量n、遍历范围radius等。
+---
