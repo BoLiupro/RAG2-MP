@@ -10,6 +10,7 @@ from peft import get_peft_model, LoraConfig, TaskType
 from typing import List, Dict, Any, Tuple
 import numpy as np
 from datetime import datetime
+from common.utils import format_trajectory_with_distances, get_mobility_mode, calculate_grid_distance
 
 
 class MobilityLLM:
@@ -80,7 +81,7 @@ class MobilityLLM:
             quantization_config=bnb_config,
             device_map="auto" if torch.cuda.is_available() else None,
             trust_remote_code=True,
-            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
+            dtype=torch.float16 if torch.cuda.is_available() else torch.float32
         )
         
         # Apply LoRA if requested
@@ -99,6 +100,60 @@ class MobilityLLM:
         
         self.model.eval()
         print(f"LLM loaded successfully on {self.device}")
+    
+    def generate(
+        self,
+        prompt: str,
+        max_new_tokens: int = 512,
+        temperature: float = 0.7,
+        do_sample: bool = True,
+        top_p: float = 0.9
+    ) -> str:
+        """
+        Generate text based on a prompt.
+        
+        Args:
+            prompt: Input prompt text
+            max_new_tokens: Maximum number of tokens to generate
+            temperature: Sampling temperature
+            do_sample: Whether to use sampling
+            top_p: Nucleus sampling parameter
+        
+        Returns:
+            Generated text (excluding the prompt)
+        """
+        # Tokenize
+        inputs = self.tokenizer(
+            prompt,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=512
+        ).to(self.device)
+        
+        # Generate
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                num_return_sequences=1,
+                temperature=temperature,
+                do_sample=do_sample,
+                top_p=top_p,
+                pad_token_id=self.tokenizer.pad_token_id,
+                eos_token_id=self.tokenizer.eos_token_id
+            )
+        
+        # Decode the generated text
+        generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        
+        # Extract only the generated part (after the prompt)
+        if generated_text.startswith(prompt):
+            result = generated_text[len(prompt):].strip()
+        else:
+            result = generated_text.strip()
+        
+        return result
     
     def _build_trajectory_prompt(
         self,
@@ -119,20 +174,19 @@ class MobilityLLM:
         Returns:
             Formatted prompt string
         """
-        # Determine mobility mode
-        if city == 'shenzhen':
-            mobility_mode = "private car"
-        else:
-            mobility_mode = "general mobility (walking, public transport, taxi, etc.)"
+        # Get mobility mode description
+        mobility_mode = get_mobility_mode(city)
         
         if task == "encoding":
             # Prompt for trajectory encoding
             prompt = f"You are analyzing a user's mobility trajectory for {mobility_mode}. "
+            prompt += "Note: trajectories may include both movement and stationary periods (staying at the same location). "
             prompt += "Please encode the following trajectory into a semantic representation:\n\n"
         else:
             # Prompt for summary generation (used in RAG)
             prompt = f"Based on similar {mobility_mode} mobility patterns, "
-            prompt += "summarize where the user is likely to go next:\n\n"
+            prompt += "summarize where the user is likely to go next. "
+            prompt += "Note: users may stay at the same location or move to a new one.\n\n"
         
         # Add trajectory information
         prompt += "Trajectory:\n"
@@ -298,7 +352,7 @@ class MobilityLLM:
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
-                max_new_tokens=max_length,
+                max_new_tokens=512,  # Increased to ensure complete responses
                 num_return_sequences=1,
                 temperature=0.7,
                 do_sample=True,
@@ -325,7 +379,7 @@ class MobilityLLM:
         rag_summary: str = None,
         poi_data: Dict[int, Dict[str, float]] = None,
         city: str = "general",
-        top_k: int = 5
+        top_k_predictions: int = 5
     ) -> List[Tuple[int, float]]:
         """
         Predict the next location from candidate locations.
@@ -336,16 +390,14 @@ class MobilityLLM:
             rag_summary: Summary from RAG module (optional)
             poi_data: POI features for locations
             city: City name
-            top_k: Number of top predictions to return
+            top_k_predictions: Number of top predictions to return
         
         Returns:
             List of (location_id, confidence_score) tuples
         """
         # Build prediction prompt
-        if city == 'shenzhen':
-            mobility_mode = "private car"
-        else:
-            mobility_mode = "general mobility"
+        from common.utils import get_mobility_mode
+        mobility_mode = get_mobility_mode(city)
         
         prompt = f"You are predicting the next location for {mobility_mode}.\n\n"
         
@@ -370,7 +422,7 @@ class MobilityLLM:
                 poi_info = f" - Primary: {top_poi[0]} ({top_poi[1]:.1f}%)"
             prompt += f"  - Location {loc_id}{poi_info}\n"
         
-        prompt += f"\nRank the top {top_k} most likely next locations and explain briefly:"
+        prompt += f"\nRank the top {top_k_predictions} most likely next locations and explain briefly:"
         
         # Generate prediction
         inputs = self.tokenizer(
@@ -384,7 +436,7 @@ class MobilityLLM:
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
-                max_new_tokens=256,
+                max_new_tokens=512,  # Increased for complete responses
                 num_return_sequences=1,
                 temperature=0.7,
                 do_sample=True,
@@ -399,7 +451,7 @@ class MobilityLLM:
         # Parse predictions (this is a simple heuristic, can be improved)
         # For now, return candidate locations with uniform confidence
         # TODO: Implement more sophisticated parsing of LLM output
-        predictions = [(loc_id, 1.0 / (i + 1)) for i, loc_id in enumerate(candidate_locations[:top_k])]
+        predictions = [(loc_id, 1.0 / (i + 1)) for i, loc_id in enumerate(candidate_locations[:top_k_predictions])]
         
         return predictions
     

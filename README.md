@@ -128,6 +128,7 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 提交修改后的mobility_processing.py脚本。
 - 重新运行修改后的脚本，生成处理后的所有城市出行轨迹数据csv文件，包括train.csv, val.csv, test.csv。文件全部保存在data/{city}目录下。
 ---
+
 # 代码框架
 ---
 我这个项目解决的问题是human mobility prediction,即根据user历史轨迹来预测下一步出现的位置。数学公式定义是：input包括user的历史轨迹S={s_1,s_2,...,s_i},每个s_i=(li,ti)，表示在时间ti出现在grid li (li是spatial identifier)位置上。output是下一个时间点t_(i+1)出现的位置l_(i+1)。我的method主要是将LLM和改进版的garvity model结合起来进行预测。主要包含三个module：
@@ -165,8 +166,7 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 提交的LLM.py脚本中，包括建立加载LLM、编码轨迹得到embedding的函数、接收similar samples并生成summary输出的函数。输入参数包括LLM名（例如Deepseek-R1-Distill-Qwen-3B）、LLM维度相关参数等。
 - 提交RAG.py脚本中，包括接收obs，调用LLM编码得到embedding，计算相似度，找到top-m相似样本，调用LLM生成summary的函数。输入参数包括经验池路径、top-m参数等。
 ---
-
-# Prompt_2.2[框架搭建：改进版Gravity Model模块实现]
+# Prompt_2.2[框架搭建：改进版GravityModel模块实现]
 ## 背景
 现在我要搭建改进版Gravity Model模块的代码框架。这个模块的主要功能是利用改进版的重力模型为下一个位置的预测选择一些候选位置。在当前位置，遍历一定范围内的网格，依据网格中的各个种类的POI数量信息，计算每个网格中各个类型POI的得分。最终得到每个POI类型下得分最高的top-n网格作为候选位置。
 
@@ -188,8 +188,7 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 所有的类用大写开头驼峰命名法，函数和变量用小写字母加下划线命名法。
 - 提交的Gravity.py脚本中，包括接收当前位置和POI数据，计算各个网格POI得分，选择top-n候选位置的函数。输入参数包括weight参数、候选位置数量n、遍历范围radius等。
 ---
-
-## Prompt_2.3 [当前RAG+Gravity功能检查与修改]
+# Prompt_2.3[当前RAG+Gravity功能检查与修改]
 ## 背景
 现在写的LLM+RAG和Gravity模块基本上正确且可以运行了。但是有一些地方我觉得不太对，需要修改。现在有以下几个问题：
 1、Gravity模块最后的输出，现在是把所有poi类别合并在一起，选出了top-n个候选位置。但是我想要的是针对每个poi类别，分别选出top-n个候选位置。也就是说，如果有14个poi类别，最终的输出应该是14组top-n候选位置，每组对应一个poi类别。这样LLM在结合similar summary分析了user的mobility的意图之后，可以针对不同的poi类别，选择不同的候选位置进行预测。
@@ -233,4 +232,65 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 所有的类用大写开头驼峰命名法，函数和变量用小写字母加下划线命名法。
 - 提交的MobilityPredictor.py脚本中，包括MobilityPredictor类的定义和实现。输入参数包括obs数据、top-K预测位置、RAG中的similar sample的数量、gravity的radius等所有模块中我之前提到过需要手动设置的参数。
 - 最终利用LLM进行预测的prompt和回答也要打印出来，方便调试和优化prompt设计。
+---
+# Prompt_2.5[框架优化与调整]
+## 背景
+现在我已经基本完成了整个mobility prediction的代码框架，包括LLM+RAG模块、改进版Gravity Model模块和最终预测模块。但是在实际测试过程中，我发现有一些地方需要优化和调整：
+1、LLM的回答有时候会被截断，导致输出不完整。我想要调整LLM的生成参数，比如增加max_new_tokens的值，确保回答的完整性。
+2、RAG_Summary我觉得信息很混乱，不够结构化。比如现在的summary是一个长段落的文本，我觉得可以把summary设计成一个更结构化的格式，比如每个可能的下一个位置对应一个简短的描述，或者用列表的形式列出几个可能的位置和对应的理由。这样可以帮助LLM更好地理解和利用这些信息进行最终预测。
+3、我觉得在similar sample输入到LLM、gravity candidates输入到LLM和最终输入到LLM的信息还需要加上空间的信息。我觉得可以加上location之间的距离，比如轨迹序列中location之间的距离、similar sample的轨迹中每个location之间的距离、gravity candidates与当前location的距离等。这样可以帮助LLM更好地理解位置之间的空间关系，从而提升预测的准确性。
+4、gravity model输出的candidates还需要包含原地自身作为一个候选位置。有时候用户可能会选择留在原地不动，这种情况也需要考虑进去。
+5、top-k,top-m、top-n等参数的命名需要更清楚一些。我觉得可以把top-k改成top_k_predictions，把top-m改成rag_top_m_samples，把top-n改成gravity_top_n_candidates。这样命名更清晰，能够更好地表达这些参数的含义。
+6、输入给LLM的prompt我感觉让LLM以为这是一个不断在移动的轨迹，导致LLM太过注重移动速度。但是事实上mobility并不是一个”物理题目“，轨迹可能是移动和停止的结合体。我觉得需要在prompt中明确指出这一点，告诉LLM轨迹中可能包含停留不动的情况。
+7、一些重复使用的函数工具，可以统一移动到utils.py中，方便调用和维护。
+8、我想把rag_database挪到/workspace/China_Journal/util路径下。
+
+## 任务
+请完成以下任务：
+1. **LLM参数调整**：
+   - 修改LLM.py脚本中的生成参数，增加max_new_tokens的值，确保回答的完整性。
+2. **RAG Summary格式优化**：
+   - 修改RAG.py脚本中的summary生成部分，设计一个更结构化的summary格式。
+3. **空间信息添加**：
+   - 修改RAG.py和Gravity.py脚本，添加位置之间的距离信息。
+4. **Gravity Candidates优化**：
+   - 修改Gravity.py脚本，确保输出的candidates中包含原地自身位置。
+5. **参数命名调整**：
+   - 修改所有相关脚本中的top-k, top-m, top-n参数命名，分别改为top_k_predictions, rag_top_m_samples, gravity_top_n_candidates。
+6. **Prompt优化**：
+   - 修改RAG.py和MobilityPredictor.py脚本中的prompt设计，明确指出轨迹中可能包含停留不动的情况。
+7. **工具函数整理**：
+   - 将重复使用的函数工具统一移动到utils.py中。
+8. **RAG数据库路径修改**：
+   - 修改RAG.py脚本中的rag_database路径，改为/workspace/China_Journal/util/rag_database。
+---
+# Prompt_2.6[框架代码细节修改]
+## 背景
+现在我已经完成了整个mobility prediction的代码框架，并且进行了优化和调整。但是在实际测试过程中，我发现有一些代码细节需要修改和完善：
+1、在距离的计算当中，我希望使用haversine公式来计算两个经纬度坐标之间的距离。这样可以更准确地反映地球表面的距离关系，而不是用多少个grid来表示距离，因为grid的大小是人为设定的，不能准确反映实际距离，LLM在理解空间关系时可能会有疑问。
+2、现在rag_summary好像仅仅是把simlar samples的内容简单拼接在一起，我觉得可以用LLM对这些similar samples进行一些归纳总结，提取出更有代表性的特征和模式，而不是简单地拼接。这样可以让summary更加精炼和有用。
+3、描述current trajectiry的时候，用”→ distance to next: 1.0 grids“我觉得有点奇怪，改成”distance to previous:“可能会好一些。因为LLM是根据历史轨迹来预测下一个位置的，描述距离时更关注前一个位置和当前位置之间的距离关系。
+4、我移动了util.py的位置，现在放在/workspace/China_Journal/common/utils.py下，所以需要修改所有引用util.py的脚本中的import路径。
+
+## 任务
+请完成以下任务：
+1. **距离计算修改**：
+   - 修改utils.py脚本中的距离计算函数，使用haversine公式来计算两个经纬度坐标之间的距离。
+2. **RAG Summary生成修改**：
+   - 修改RAG.py脚本中的summary生成部分，使用LLM对similar samples进行归纳总结，提取出更有代表性的特征和模式。
+3. **轨迹距离描述修改**：
+   - 修改RAG.py脚本中的轨迹描述部分，将”distance to next“改为”distance to previous“。
+4. **util.py路径修改**：
+   - 修改所有引用util.py的脚本中的import路径，改为from common.utils import ...
+
+## 约束
+1、RAG_summary的生成部分需要调用LLM进行归纳总结，而不是简单拼接similar samples。prompt要引导从similar samples中提取出代表性的特征和模式并提供一个回答的模板，避免LLM
+的回答过于发散和格式过于混乱。
+2、RAG_suammary的长度可能需要控制，避免出现过长summry然后被截断的情况。我觉得可以设置一个最大长度的限制。
+
+---
+
+
+
+# 训练流程 
 ---

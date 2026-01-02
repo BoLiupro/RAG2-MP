@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Tuple
 from .LLM import MobilityLLM
 from .RAG import MobilityRAG
 from .Gravity import GravityModel
+from common.utils import format_trajectory_with_distances, calculate_grid_distance, format_candidates_with_distances
 
 
 class MobilityPredictor:
@@ -25,12 +26,12 @@ class MobilityPredictor:
         self,
         llm_model_name: str = "Deepseek-R1-Distill-Qwen-3B",
         llm_model_path: str = "/datadisk",
-        rag_database_path: str = "/workspace/China_Journal/model/rag_database",
+        rag_database_path: str = "/workspace/China_Journal/util/rag_database",
         poi_data_path: str = None,
         city: str = "beijing",
-        top_k: int = 5,
-        top_m: int = 5,
-        top_n: int = 5,
+        top_k_predictions: int = 5,
+        rag_top_m_samples: int = 5,
+        gravity_top_n_candidates: int = 5,
         gravity_weight: float = 1.0,
         gravity_radius: int = 10,
         use_quantization: bool = True,
@@ -46,9 +47,9 @@ class MobilityPredictor:
             rag_database_path: Path to RAG database
             poi_data_path: Path to POI data CSV file
             city: City name
-            top_k: Number of top predictions to return
-            top_m: Number of similar samples to retrieve (RAG)
-            top_n: Number of candidates per POI category (Gravity)
+            top_k_predictions: Number of top predictions to return
+            rag_top_m_samples: Number of similar samples to retrieve (RAG)
+            gravity_top_n_candidates: Number of candidates per POI category (Gravity)
             gravity_weight: Weight parameter for gravity model
             gravity_radius: Search radius for gravity model (in grid units)
             use_quantization: Whether to use 4-bit quantization for LLM
@@ -56,9 +57,9 @@ class MobilityPredictor:
             verbose: If True, print prompts and intermediate results
         """
         self.city = city
-        self.top_k = top_k
-        self.top_m = top_m
-        self.top_n = top_n
+        self.top_k_predictions = top_k_predictions
+        self.rag_top_m_samples = rag_top_m_samples
+        self.gravity_top_n_candidates = gravity_top_n_candidates
         self.gravity_weight = gravity_weight
         self.gravity_radius = gravity_radius
         self.verbose = verbose
@@ -67,9 +68,9 @@ class MobilityPredictor:
         print("Initializing MobilityPredictor")
         print(f"{'='*70}")
         print(f"City: {city}")
-        print(f"Top-K predictions: {top_k}")
-        print(f"RAG top-M similar samples: {top_m}")
-        print(f"Gravity top-N per category: {top_n}")
+        print(f"Top-K Predictions: {top_k_predictions}")
+        print(f"RAG Top-M Samples: {rag_top_m_samples}")
+        print(f"Gravity Top-N per Category: {gravity_top_n_candidates}")
         print(f"Gravity weight: {gravity_weight}")
         print(f"Gravity radius: {gravity_radius}")
         print(f"Verbose mode: {verbose}")
@@ -88,7 +89,7 @@ class MobilityPredictor:
         self.rag = MobilityRAG(
             llm=self.llm,
             rag_database_path=rag_database_path,
-            top_m=top_m,
+            rag_top_m_samples=rag_top_m_samples,
             city=city,
             verbose=verbose
         )
@@ -113,7 +114,7 @@ class MobilityPredictor:
             poi_data_path=poi_data_path,
             city=city,
             weight=gravity_weight,
-            top_n=top_n,
+            gravity_top_n_candidates=gravity_top_n_candidates,
             radius=gravity_radius
         )
         
@@ -167,7 +168,7 @@ class MobilityPredictor:
         
         rag_summary, similar_samples, similarities = self.rag.generate_rag_summary(
             query_trajectory=observation_trajectory,
-            top_m=self.top_m,
+            rag_top_m_samples=self.rag_top_m_samples,
             print_prompt=print_prompt
         )
         
@@ -181,11 +182,12 @@ class MobilityPredictor:
         
         candidates_by_category = self.gravity.get_candidate_locations(
             current_grid_id=current_location,
-            return_scores=True
+            return_scores=True,
+            include_current=True  # Include current location for stationary behavior
         )
         
         print(f"\n✓ Generated {len(candidates_by_category)} POI category groups")
-        print(f"  Each category has top-{self.top_n} candidates")
+        print(f"  Each category has top-{self.gravity_top_n_candidates} candidates (including current location)")
         
         # Display sample candidates
         print(f"\nSample Candidates (top 3 categories):")
@@ -208,7 +210,7 @@ class MobilityPredictor:
         )
         
         # Display predictions
-        print(f"\n✓ Final Predictions (Top-{self.top_k}):")
+        print(f"\n✓ Final Predictions (Top-{self.top_k_predictions}):")
         for i, (loc_id, confidence) in enumerate(predictions, 1):
             match_indicator = "✓" if ground_truth is not None and loc_id == ground_truth else " "
             print(f"  {match_indicator} {i}. Grid {loc_id} - Confidence: {confidence:.4f}")
@@ -220,7 +222,7 @@ class MobilityPredictor:
                 rank = predicted_locations.index(ground_truth) + 1
                 print(f"\n✓ Ground truth found at rank {rank}")
             else:
-                print(f"\n✗ Ground truth not in top-{self.top_k} predictions")
+                print(f"\n✗ Ground truth not in top-{self.top_k_predictions} predictions")
         
         print(f"{'='*70}\n")
         
@@ -291,7 +293,7 @@ class MobilityPredictor:
         with torch.no_grad():
             outputs = self.llm.model.generate(
                 **inputs,
-                max_new_tokens=256,
+                max_new_tokens=512,  # Increased for complete responses
                 num_return_sequences=1,
                 temperature=0.7,
                 do_sample=True,
@@ -318,7 +320,7 @@ class MobilityPredictor:
         predictions = self._parse_predictions_from_response(
             response,
             candidate_list,
-            top_k=self.top_k
+            top_k=self.top_k_predictions
         )
         
         return predictions
@@ -341,38 +343,48 @@ class MobilityPredictor:
             Formatted prompt string
         """
         # Determine mobility mode
-        if self.city == 'shenzhen':
-            mobility_mode = "private car mobility"
-        else:
-            mobility_mode = "general mobility"
+        from common.utils import get_mobility_mode
+        mobility_mode = get_mobility_mode(self.city)
         
         prompt = f"You are a mobility prediction expert analyzing {mobility_mode} patterns. "
+        prompt += "Note: Trajectories may include both movement and stationary periods (staying at the same location). "
         prompt += "Your task is to predict the next location based on the following information:\n\n"
         
-        # Add observation trajectory
+        # Add observation trajectory with distances
         prompt += "## Current Trajectory:\n"
-        for i, point in enumerate(observation_trajectory, 1):
-            loc_id = point.get('location_id', 'unknown')
-            timestamp = point.get('timestamp', '')
-            prompt += f"{i}. Location {loc_id} at {timestamp}\n"
+        formatted_traj = format_trajectory_with_distances(
+            observation_trajectory,
+            city=self.city,
+            include_poi=False,
+            poi_data=None
+        )
+        prompt += formatted_traj + "\n"
         
         # Add RAG summary
         prompt += f"\n## Similar Historical Patterns:\n"
         prompt += f"{rag_summary}\n"
         
-        # Add gravity model candidates by category
+        # Add gravity model candidates by category with distances
         prompt += f"\n## Candidate Locations by POI Category:\n"
-        prompt += "Based on the gravity model, here are the most attractive locations for each category:\n\n"
+        prompt += "Based on the gravity model, here are the most attractive locations for each category:\n"
+        prompt += "(Note: Current location is included as a candidate for stationary behavior)\n\n"
         
-        # Show top 3 categories with their candidates
+        current_location = observation_trajectory[-1]['location_id']
+        
+        # Show top 5 categories with their candidates and distances
         category_count = 0
         for category, candidates in candidates_by_category.items():
             if category_count >= 5:  # Limit to top 5 categories to avoid prompt length
                 break
             
             category_display = category.replace('_count', '')
-            candidate_locs = [f"Grid {c[0]}" for c in candidates[:3]]
-            prompt += f"- {category_display}: {', '.join(candidate_locs)}\n"
+            candidate_str = format_candidates_with_distances(
+                candidates[:3],
+                current_location,
+                city=self.city,
+                include_scores=False
+            )
+            prompt += f"- {category_display}: {candidate_str}\n"
             category_count += 1
         
         # Get all unique candidates for the final instruction
@@ -386,10 +398,11 @@ class MobilityPredictor:
         # Add prediction instruction
         prompt += f"\n## Your Task:\n"
         prompt += f"Based on the trajectory pattern, similar historical behaviors, and candidate locations, "
-        prompt += f"predict the top {self.top_k} most likely next locations.\n"
+        prompt += f"predict the top {self.top_k_predictions} most likely next locations.\n"
+        prompt += f"Remember: The user may stay at the current location (Grid {current_location}) or move to a new location.\n"
         prompt += f"Choose from these candidates: {candidate_list_str}\n\n"
         prompt += f"Format your answer as: Grid [ID], Grid [ID], Grid [ID], ...\n"
-        prompt += f"Provide exactly {self.top_k} predictions in order of likelihood.\n\n"
+        prompt += f"Provide exactly {self.top_k_predictions} predictions in order of likelihood.\n\n"
         prompt += "Your predictions:"
         
         return prompt
@@ -546,9 +559,9 @@ class MobilityPredictor:
         """Get statistics about the predictor configuration."""
         return {
             'city': self.city,
-            'top_k': self.top_k,
-            'top_m': self.top_m,
-            'top_n': self.top_n,
+            'top_k_predictions': self.top_k_predictions,
+            'rag_top_m_samples': self.rag_top_m_samples,
+            'gravity_top_n_candidates': self.gravity_top_n_candidates,
             'gravity_weight': self.gravity_weight,
             'gravity_radius': self.gravity_radius,
             'llm_model': self.llm.model_name,
@@ -565,9 +578,9 @@ class MobilityPredictor:
         print(f"{'='*50}")
         print(f"City: {stats['city']}")
         print(f"LLM Model: {stats['llm_model']}")
-        print(f"Top-K Predictions: {stats['top_k']}")
-        print(f"RAG Top-M: {stats['top_m']}")
-        print(f"Gravity Top-N: {stats['top_n']}")
+        print(f"Top-K Predictions: {stats['top_k_predictions']}")
+        print(f"RAG Top-M Samples: {stats['rag_top_m_samples']}")
+        print(f"Gravity Top-N per Category: {stats['gravity_top_n_candidates']}")
         print(f"Gravity Weight: {stats['gravity_weight']}")
         print(f"Gravity Radius: {stats['gravity_radius']}")
         print(f"RAG Database Size: {stats['rag_database_size']}")

@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 from typing import List, Dict, Tuple, Optional
 import os
+from common.utils import calculate_grid_distance, grid_id_to_coordinates, coordinates_to_grid_id
 
 
 class GravityModel:
@@ -23,7 +24,7 @@ class GravityModel:
         poi_data_path: str,
         city: str = 'beijing',
         weight: float = 1.0,
-        top_n: int = 5,
+        gravity_top_n_candidates: int = 5,
         radius: int = 10,
         grid_size: int = 40
     ):
@@ -34,13 +35,13 @@ class GravityModel:
             poi_data_path: Path to POI data CSV file (e.g., beijing_grid_poi.csv)
             city: City name ('beijing', 'nanchang', 'shenzhen')
             weight: Weight parameter in gravity model formula
-            top_n: Number of top candidate locations to return for each POI category
+            gravity_top_n_candidates: Number of top candidate locations to return for each POI category
             radius: Search radius (in grid units) around current location
             grid_size: Size of the grid system (default 40x40 = 1600 grids)
         """
         self.city = city
         self.weight = weight
-        self.top_n = top_n
+        self.gravity_top_n_candidates = gravity_top_n_candidates
         self.radius = radius
         self.grid_size = grid_size
         
@@ -66,7 +67,7 @@ class GravityModel:
         ]
         
         print(f"Initialized GravityModel for {city}")
-        print(f"Parameters: weight={weight}, top_n={top_n}, radius={radius}")
+        print(f"Parameters: weight={weight}, gravity_top_n_candidates={gravity_top_n_candidates}, radius={radius}")
         print(f"Loaded POI data for {len(self.poi_data)} locations")
     
     def _load_poi_data(self, poi_data_path: str) -> pd.DataFrame:
@@ -88,54 +89,16 @@ class GravityModel:
         return df
     
     def _grid_id_to_coordinates(self, grid_id: int) -> Tuple[int, int]:
-        """
-        Convert grid ID to grid coordinates (row, col).
-        Grid IDs are numbered 0 to 1599 for a 40x40 grid.
-        
-        Args:
-            grid_id: Grid ID (0 to grid_size^2 - 1)
-        
-        Returns:
-            Tuple of (row, col) coordinates
-        """
-        row = grid_id // self.grid_size
-        col = grid_id % self.grid_size
-        return row, col
+        """Use utility function for grid coordinate conversion."""
+        return grid_id_to_coordinates(grid_id, self.grid_size)
     
     def _coordinates_to_grid_id(self, row: int, col: int) -> int:
-        """
-        Convert grid coordinates to grid ID.
-        
-        Args:
-            row: Row index (0 to grid_size-1)
-            col: Column index (0 to grid_size-1)
-        
-        Returns:
-            Grid ID
-        """
-        return row * self.grid_size + col
+        """Use utility function for grid ID conversion."""
+        return coordinates_to_grid_id(row, col, self.grid_size)
     
     def _calculate_distance(self, grid_id_1: int, grid_id_2: int) -> float:
-        """
-        Calculate Euclidean distance between two grids.
-        
-        Args:
-            grid_id_1: First grid ID
-            grid_id_2: Second grid ID
-        
-        Returns:
-            Euclidean distance in grid units
-        """
-        row1, col1 = self._grid_id_to_coordinates(grid_id_1)
-        row2, col2 = self._grid_id_to_coordinates(grid_id_2)
-        
-        distance = np.sqrt((row1 - row2) ** 2 + (col1 - col2) ** 2)
-        
-        # Avoid division by zero (for current location itself)
-        if distance < 0.1:
-            distance = 0.1
-        
-        return distance
+        """Use utility function for distance calculation with haversine formula."""
+        return calculate_grid_distance(grid_id_1, grid_id_2, city=self.city, grid_size=self.grid_size)
     
     def _get_grids_within_radius(self, current_grid_id: int) -> List[int]:
         """
@@ -208,18 +171,21 @@ class GravityModel:
     def get_candidate_locations(
         self,
         current_grid_id: int,
-        return_scores: bool = False
+        return_scores: bool = False,
+        include_current: bool = True
     ) -> Dict[str, List]:
         """
         Get candidate locations for each POI category using the gravity model.
         
         For each POI category, calculates gravity scores for all grids within radius,
         then returns the top-n grids with highest scores.
+        Optionally includes the current location as a candidate (for stationary behavior).
         
         Args:
             current_grid_id: Current location grid ID
             return_scores: If True, return tuples of (grid_id, score); 
                           If False, return only grid_ids
+            include_current: If True, always include current location as a candidate
         
         Returns:
             Dictionary mapping POI category to list of top-n candidates
@@ -244,9 +210,30 @@ class GravityModel:
                 )
                 scores.append((target_grid_id, score))
             
-            # Sort by score (descending) and select top-n
+            # Sort by score (descending)
             scores.sort(key=lambda x: x[1], reverse=True)
-            top_candidates = scores[:self.top_n]
+            
+            # Select top-n candidates
+            if include_current:
+                # Ensure current location is included
+                top_candidates = []
+                current_included = False
+                
+                for grid_id, score in scores:
+                    if grid_id == current_grid_id:
+                        current_included = True
+                    top_candidates.append((grid_id, score))
+                    if len(top_candidates) >= self.gravity_top_n_candidates:
+                        break
+                
+                # If current location wasn't in top-n, add it
+                if not current_included:
+                    current_score = self._calculate_gravity_score(
+                        current_grid_id, current_grid_id, poi_category
+                    )
+                    top_candidates.append((current_grid_id, current_score))
+            else:
+                top_candidates = scores[:self.gravity_top_n_candidates]
             
             if return_scores:
                 candidates[poi_category] = top_candidates
@@ -358,8 +345,8 @@ class GravityModel:
         print(f"\n{'='*70}")
         
         # Print top-k overall candidates
-        print(f"\nTop-{self.top_n} Overall Candidates (by average score):")
-        top_k_candidates = self.get_top_k_candidates(current_grid_id, k=self.top_n)
+        print(f"\nTop-{self.gravity_top_n_candidates} Overall Candidates (by average score):")
+        top_k_candidates = self.get_top_k_candidates(current_grid_id, k=self.gravity_top_n_candidates)
         for i, (grid_id, avg_score) in enumerate(top_k_candidates, 1):
             row, col = self._grid_id_to_coordinates(grid_id)
             distance = self._calculate_distance(current_grid_id, grid_id)
@@ -378,7 +365,7 @@ class GravityModel:
         return {
             'city': self.city,
             'weight': self.weight,
-            'top_n': self.top_n,
+            'gravity_top_n_candidates': self.gravity_top_n_candidates,
             'radius': self.radius,
             'grid_size': self.grid_size,
             'total_grids': self.grid_size ** 2,
@@ -395,7 +382,7 @@ class GravityModel:
         print(f"{'='*50}")
         print(f"City: {stats['city']}")
         print(f"Weight Parameter: {stats['weight']}")
-        print(f"Top-N Candidates per Category: {stats['top_n']}")
+        print(f"Gravity Top-N Candidates per Category: {stats['gravity_top_n_candidates']}")
         print(f"Search Radius: {stats['radius']} grids")
         print(f"Grid System: {stats['grid_size']}x{stats['grid_size']} = {stats['total_grids']} grids")
         print(f"POI Categories: {stats['poi_categories']}")

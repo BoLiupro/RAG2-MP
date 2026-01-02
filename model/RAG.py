@@ -12,6 +12,7 @@ import faiss
 from typing import List, Dict, Any, Tuple
 from tqdm import tqdm
 from .LLM import MobilityLLM
+from common.utils import format_trajectory_with_distances, calculate_grid_distance, format_candidates_with_distances
 
 
 class MobilityRAG:
@@ -23,8 +24,8 @@ class MobilityRAG:
     def __init__(
         self,
         llm: MobilityLLM,
-        rag_database_path: str = "/workspace/China_Journal/model/rag_database",
-        top_m: int = 5,
+        rag_database_path: str = "/workspace/China_Journal/util/rag_database",
+        rag_top_m_samples: int = 5,
         city: str = "general",
         verbose: bool = False
     ):
@@ -34,13 +35,13 @@ class MobilityRAG:
         Args:
             llm: An initialized MobilityLLM instance
             rag_database_path: Path to the RAG database directory
-            top_m: Number of top similar samples to retrieve
+            rag_top_m_samples: Number of top similar samples to retrieve
             city: City name for the dataset
             verbose: If True, print prompts sent to LLM
         """
         self.llm = llm
         self.rag_database_path = rag_database_path
-        self.top_m = top_m
+        self.rag_top_m_samples = rag_top_m_samples
         self.city = city
         self.verbose = verbose
         
@@ -52,7 +53,7 @@ class MobilityRAG:
         
         print(f"Initialized MobilityRAG for {city}")
         print(f"RAG database path: {rag_database_path}")
-        print(f"Retrieving top-{top_m} similar samples")
+        print(f"Retrieving top-{rag_top_m_samples} similar samples")
         print(f"Verbose mode: {verbose}")
     
     def _build_faiss_index(self):
@@ -159,7 +160,7 @@ class MobilityRAG:
         
         Args:
             query_embedding: Query embedding (normalized)
-            top_k: Number of top results to return (if None, use self.top_m)
+            top_k: Number of top results to return (if None, use self.rag_top_m_samples)
         
         Returns:
             Tuple of (similarities, indices) for top-k matches
@@ -168,7 +169,7 @@ class MobilityRAG:
             raise ValueError("FAISS index not built. Load RAG database first.")
         
         if top_k is None:
-            top_k = self.top_m
+            top_k = self.rag_top_m_samples
         
         # Reshape query embedding if needed
         if query_embedding.ndim == 1:
@@ -186,20 +187,20 @@ class MobilityRAG:
     def retrieve_similar_samples(
         self,
         query_trajectory: List[Dict[str, Any]],
-        top_m: int = None
+        rag_top_m_samples: int = None
     ) -> Tuple[List[Dict[str, Any]], np.ndarray, np.ndarray]:
         """
         Retrieve top-m similar samples from the RAG database using FAISS.
         
         Args:
             query_trajectory: The query trajectory to find similar samples for
-            top_m: Number of top samples to retrieve (uses self.top_m if None)
+            rag_top_m_samples: Number of top samples to retrieve (uses self.rag_top_m_samples if None)
         
         Returns:
             Tuple of (similar_samples, similarity_scores, indices)
         """
-        if top_m is None:
-            top_m = self.top_m
+        if rag_top_m_samples is None:
+            rag_top_m_samples = self.rag_top_m_samples
         
         # Encode the query trajectory
         query_embedding = self.llm.encode_trajectory(
@@ -209,7 +210,7 @@ class MobilityRAG:
         )
         
         # Use FAISS for efficient similarity search
-        similarities, indices = self.compute_similarity(query_embedding, top_k=top_m)
+        similarities, indices = self.compute_similarity(query_embedding, top_k=rag_top_m_samples)
         
         # Retrieve corresponding samples
         similar_samples = [self.database_samples[idx] for idx in indices]
@@ -219,15 +220,15 @@ class MobilityRAG:
     def generate_rag_summary(
         self,
         query_trajectory: List[Dict[str, Any]],
-        top_m: int = None,
+        rag_top_m_samples: int = None,
         print_prompt: bool = None
     ) -> Tuple[str, List[Dict[str, Any]], np.ndarray]:
         """
-        Complete RAG workflow: retrieve similar samples and generate summary.
+        Complete RAG workflow: retrieve similar samples and generate summary with structured format.
         
         Args:
             query_trajectory: The query trajectory (observation)
-            top_m: Number of top samples to retrieve
+            rag_top_m_samples: Number of top samples to retrieve
             print_prompt: If True, print the prompt sent to LLM (overrides self.verbose)
         
         Returns:
@@ -239,7 +240,7 @@ class MobilityRAG:
         
         # Retrieve similar samples using FAISS
         similar_samples, similarities, indices = self.retrieve_similar_samples(
-            query_trajectory, top_m
+            query_trajectory, rag_top_m_samples
         )
         
         print(f"\nRetrieved {len(similar_samples)} similar samples (using FAISS):")
@@ -247,16 +248,223 @@ class MobilityRAG:
             next_loc = sample.get('next_location', 'unknown')
             print(f"  {i}. Similarity: {sim:.4f}, Next location: {next_loc}, Index: {idx}")
         
-        # Generate summary using LLM
-        summary = self.llm.generate_similarity_summary(
+        # Generate structured summary with location-based grouping
+        summary = self._generate_structured_summary(
             query_trajectory=query_trajectory,
             similar_samples=similar_samples,
-            poi_data=self.poi_data,
-            city=self.city,
+            similarities=similarities,
             print_prompt=print_prompt
         )
         
         return summary, similar_samples, similarities
+    
+    def _generate_structured_summary(
+        self,
+        query_trajectory: List[Dict[str, Any]],
+        similar_samples: List[Dict[str, Any]],
+        similarities: np.ndarray,
+        print_prompt: bool = False,
+        max_summary_length: int = 500
+    ) -> str:
+        """
+        Generate an LLM-synthesized summary from similar trajectory patterns.
+        Uses LLM to extract mobility patterns and insights from retrieved samples.
+        
+        Args:
+            query_trajectory: The query trajectory
+            similar_samples: List of similar trajectory samples
+            similarities: Similarity scores for each sample
+            print_prompt: If True, print the prompt
+            max_summary_length: Maximum length of summary in tokens (approximate)
+        
+        Returns:
+            LLM-generated summary text with pattern analysis
+        """
+        from common.utils import get_mobility_mode
+        
+        # Group samples by next location for statistical analysis
+        location_groups = {}
+        current_loc = query_trajectory[-1]['location_id']
+        
+        for sample, sim in zip(similar_samples, similarities):
+            next_loc = sample.get('next_location', None)
+            if next_loc is not None:
+                if next_loc not in location_groups:
+                    location_groups[next_loc] = []
+                location_groups[next_loc].append((sample, sim))
+        
+        # Calculate location statistics
+        location_stats = []
+        for loc, samples_list in location_groups.items():
+            avg_sim = np.mean([sim for _, sim in samples_list])
+            frequency = len(samples_list)
+            
+            # Calculate distance
+            dist = calculate_grid_distance(current_loc, loc, city=self.city)
+            
+            # Get POI info
+            poi_types = []
+            if self.poi_data and loc in self.poi_data:
+                poi_features = self.poi_data[loc]
+                top_pois = sorted(poi_features.items(), key=lambda x: x[1], reverse=True)[:2]
+                poi_types = [poi[0] for poi in top_pois if poi[1] > 10]
+            
+            # Collect temporal patterns
+            timestamps = []
+            for sample, _ in samples_list:
+                traj = sample.get('trajectory', [])
+                if traj:
+                    ts = traj[-1].get('timestamp', '')
+                    if ts:
+                        timestamps.append(ts)
+            
+            location_stats.append({
+                'grid_id': loc,
+                'frequency': frequency,
+                'avg_similarity': avg_sim,
+                'distance_km': dist,
+                'poi_types': poi_types,
+                'timestamps': timestamps
+            })
+        
+        # Sort by frequency and similarity
+        location_stats.sort(key=lambda x: (x['frequency'], x['avg_similarity']), reverse=True)
+        
+        # Build analysis prompt for LLM
+        mobility_mode = get_mobility_mode(self.city)
+        
+        # Prepare context for LLM
+        context_lines = []
+        context_lines.append(f"Query trajectory ends at Grid {current_loc}")
+        context_lines.append(f"\nRetrieved {len(similar_samples)} similar {mobility_mode} patterns:")
+        
+        for i, stat in enumerate(location_stats[:5], 1):
+            line = f"\n{i}. Grid {stat['grid_id']}: "
+            line += f"{stat['frequency']} occurrences, "
+            line += f"distance {stat['distance_km']:.2f} km, "
+            line += f"similarity {stat['avg_similarity']:.3f}"
+            
+            if stat['poi_types']:
+                line += f", area type: {', '.join(stat['poi_types'])}"
+            
+            if stat['timestamps']:
+                # Analyze time patterns
+                try:
+                    from datetime import datetime
+                    hours = []
+                    weekdays = []
+                    for ts in stat['timestamps'][:3]:  # Sample first 3
+                        dt = datetime.strptime(ts, '%Y%m%d %H:%M')
+                        hours.append(dt.hour)
+                        weekdays.append(dt.strftime('%A'))
+                    if hours:
+                        line += f", time patterns: {hours[0]}:00-{hours[-1]}:00"
+                    if weekdays:
+                        line += f", days: {', '.join(set(weekdays))}"
+                except:
+                    pass
+            
+            context_lines.append(line)
+        
+        context = "\n".join(context_lines)
+        
+        # Structured synthesis prompt with clear template
+        synthesis_prompt = f"""Analyze the following mobility patterns and provide a structured summary.
+
+{context}
+
+Provide your analysis in exactly this format:
+
+**Next Locations (Top 5):**
+- Grid [ID]: [frequency] patterns, [distance] km, [area type if available]
+  Reason: [why this location is likely]
+
+**Spatial Patterns:**
+[Describe distance trends and area characteristics in 1-2 sentences]
+
+**Temporal Patterns:**
+[Describe time-of-day and day-of-week patterns in 1-2 sentences, or state "No clear temporal pattern" if insufficient data]
+
+Keep your response concise and under 150 words total."""
+        
+        if print_prompt:
+            print(f"\n{'='*70}")
+            print("LLM SYNTHESIS PROMPT:")
+            print(f"{'='*70}")
+            print(synthesis_prompt)
+            print(f"{'='*70}\n")
+        
+        # Generate summary using LLM
+        try:
+            summary = self.llm.generate(
+                prompt=synthesis_prompt,
+                max_new_tokens=min(max_summary_length, 400),  # Increased to 400 for complete output
+                temperature=0.1,  # Very low temperature for structured output
+                do_sample=False  # Disable sampling for more deterministic output
+            )
+            
+            # Clean up the response
+            summary = summary.strip()
+            
+            # If summary is too short or seems incomplete, use fallback
+            if len(summary) < 50 or "Alright" in summary or "I need to" in summary:
+                raise Exception("LLM produced reasoning text instead of summary")
+            
+        except Exception as e:
+            print(f"Warning: LLM synthesis failed: {e}")
+            print("Falling back to structured summary...")
+            
+            # Fallback: structured summary without LLM
+            summary_lines = []
+            summary_lines.append(f"Based on {len(similar_samples)} similar {mobility_mode} patterns:")
+            summary_lines.append("\n**Next Locations (Top 3):**")
+            
+            for i, stat in enumerate(location_stats[:3], 1):
+                reason_parts = []
+                if stat['frequency'] > 1:
+                    reason_parts.append(f"{stat['frequency']} historical visits")
+                if stat['distance_km'] < 2:
+                    reason_parts.append("close proximity")
+                elif stat['distance_km'] > 10:
+                    reason_parts.append("long-distance movement")
+                if stat['poi_types']:
+                    reason_parts.append(f"{stat['poi_types'][0]} area")
+                
+                reason = ", ".join(reason_parts) if reason_parts else "similar pattern match"
+                
+                line = f"- Grid {stat['grid_id']}: {stat['frequency']} patterns, {stat['distance_km']:.2f} km"
+                if stat['poi_types']:
+                    line += f", {', '.join(stat['poi_types'])}"
+                line += f"\n  Reason: {reason}"
+                summary_lines.append(line)
+            
+            # Spatial patterns
+            avg_dist = np.mean([s['distance_km'] for s in location_stats[:3]])
+            poi_diversity = len(set([p for s in location_stats[:3] for p in s['poi_types']]))
+            summary_lines.append(f"\n**Spatial Patterns:**")
+            summary_lines.append(f"Average distance {avg_dist:.2f} km. ")
+            if poi_diversity > 1:
+                summary_lines.append(f"Diverse area types ({poi_diversity} categories).")
+            else:
+                summary_lines.append("Consistent area type preference.")
+            
+            # Temporal patterns
+            summary_lines.append(f"\n**Temporal Patterns:**")
+            if location_stats[0]['timestamps']:
+                summary_lines.append("Patterns observed on weekdays during midday hours.")
+            else:
+                summary_lines.append("Insufficient temporal data for pattern analysis.")
+            
+            summary = "\n".join(summary_lines)
+        
+        if print_prompt:
+            print(f"\n{'='*70}")
+            print("GENERATED SUMMARY:")
+            print(f"{'='*70}")
+            print(summary)
+            print(f"{'='*70}\n")
+        
+        return summary
     
     def build_rag_database(
         self,
@@ -342,7 +550,7 @@ class MobilityRAG:
             'database_size': len(self.database_samples) if self.database_samples else 0,
             'embedding_dim': self.database_embeddings.shape[1] if self.database_embeddings is not None else 0,
             'city': self.city,
-            'top_m': self.top_m,
+            'rag_top_m_samples': self.rag_top_m_samples,
             'poi_locations': len(self.poi_data) if self.poi_data else 0,
             'faiss_index_size': self.faiss_index.ntotal if self.faiss_index else 0
         }
@@ -357,7 +565,7 @@ class MobilityRAG:
         print(f"City: {stats['city']}")
         print(f"Database size: {stats['database_size']} samples")
         print(f"Embedding dimension: {stats['embedding_dim']}")
-        print(f"Top-M retrieval: {stats['top_m']}")
+        print(f"RAG Top-M Samples: {stats['rag_top_m_samples']}")
         print(f"POI locations: {stats['poi_locations']}")
         print(f"FAISS index size: {stats['faiss_index_size']}")
         print(f"{'='*50}\n")

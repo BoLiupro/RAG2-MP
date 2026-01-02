@@ -134,8 +134,8 @@ def test_rag_initialization(llm: MobilityLLM, city: str = 'beijing'):
     try:
         rag = MobilityRAG(
             llm=llm,
-            rag_database_path="/workspace/China_Journal/model/rag_database",
-            top_m=5,
+            rag_database_path="/workspace/China_Journal/util/rag_database",
+            rag_top_m_samples=5,
             city=city,
             verbose=True  # Enable verbose mode for prompt printing
         )
@@ -204,7 +204,7 @@ def test_rag_retrieval(rag: MobilityRAG):
         # Generate RAG summary
         summary, similar_samples, similarities = rag.generate_rag_summary(
             query_trajectory=query_trajectory,
-            top_m=3
+            rag_top_m_samples=3
         )
         
         print("\n✓ RAG retrieval and summary generation successful")
@@ -241,7 +241,7 @@ def test_next_location_prediction(llm: MobilityLLM, rag_summary: str = None):
             candidate_locations=candidate_locations,
             rag_summary=rag_summary,
             city='beijing',
-            top_k=3
+            top_k_predictions=3
         )
         
         print("✓ Next location prediction successful")
@@ -276,7 +276,7 @@ def test_gravity_model(city: str = 'beijing'):
             poi_data_path=poi_data_path,
             city=city,
             weight=1.0,
-            top_n=5,
+            gravity_top_n_candidates=5,
             radius=10
         )
         
@@ -295,7 +295,7 @@ def test_gravity_model(city: str = 'beijing'):
         )
         
         # Print candidates for a few categories
-        print(f"\nCandidates by POI Category (each category has top-{gravity_model.top_n} candidates):")
+        print(f"\nCandidates by POI Category (each category has top-{gravity_model.gravity_top_n_candidates} candidates):")
         sample_categories = ['Dining & Cusine_count', 'Shopping & Consumer Goods_count', 'Transportation Facilities_count']
         
         for category in sample_categories:
@@ -306,7 +306,7 @@ def test_gravity_model(city: str = 'beijing'):
                     print(f"  {i}. Grid {grid_id} - Score: {score:.4f}")
         
         print(f"\n✓ Generated {len(candidates_by_category)} POI category groups")
-        print(f"  Each category has top-{gravity_model.top_n} candidates")
+        print(f"  Each category has top-{gravity_model.gravity_top_n_candidates} candidates")
         print(f"  Total POI categories: {len(candidates_by_category)}")
         
         # Get top-k overall candidates
@@ -419,7 +419,7 @@ def test_integrated_prediction(llm: MobilityLLM, rag: MobilityRAG, gravity_model
         print(f"\nStep 1: Retrieving similar trajectories from RAG database...")
         rag_summary, similar_samples, similarities = rag.generate_rag_summary(
             query_trajectory=query_trajectory,
-            top_m=3
+            rag_top_m_samples=3
         )
         
         print(f"✓ Retrieved {len(similar_samples)} similar trajectories")
@@ -448,7 +448,7 @@ def test_integrated_prediction(llm: MobilityLLM, rag: MobilityRAG, gravity_model
             candidate_locations=candidate_locations,
             rag_summary=rag_summary,
             city=city,
-            top_k=5
+            top_k_predictions=5
         )
         
         print(f"\n✓ Integrated prediction successful!")
@@ -480,11 +480,11 @@ def test_mobility_predictor(city: str = 'beijing'):
         predictor = MobilityPredictor(
             llm_model_name="Deepseek-R1-Distill-Qwen-3B",
             llm_model_path="/datadisk",
-            rag_database_path="/workspace/China_Journal/model/rag_database",
+            rag_database_path="/workspace/China_Journal/util/rag_database",
             city=city,
-            top_k=5,
-            top_m=3,
-            top_n=5,
+            top_k_predictions=5,
+            rag_top_m_samples=3,
+            gravity_top_n_candidates=5,
             gravity_weight=1.0,
             gravity_radius=10,
             use_quantization=True,
