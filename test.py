@@ -6,6 +6,7 @@ Tests the complete prediction pipeline with a simple example.
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import torch
 
 from model.Predictor import MobilityPredictor
 
@@ -54,4 +55,7 @@ def test_basic_prediction():
 
 
 if __name__ == "__main__":
+    print("PyTorch:", torch.__version__)
+    print("CUDA available:", torch.cuda.is_available())
+    print("torch.version.cuda:", torch.version.cuda)
     test_basic_prediction()

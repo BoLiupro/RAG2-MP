@@ -1,0 +1,32 @@
+[2026-01-03 01:01:52] Loading datasets...
+[2026-01-03 01:01:56] Train samples: 1000
+[2026-01-03 01:01:56] Validation samples: 200
+[2026-01-03 01:01:56] Test samples: 200
+[2026-01-03 01:01:56] Initializing MobilityPredictor model...
+[2026-01-03 01:02:11] Model initialized successfully
+[2026-01-03 01:02:11] 
+======================================================================
+[2026-01-03 01:02:11] STARTING TRAINING
+[2026-01-03 01:02:11] ======================================================================
+[2026-01-03 01:02:11] 
+Epoch 1/10
+[2026-01-03 01:02:11] ----------------------------------------------------------------------
+[2026-01-03 01:02:28] Error processing sample 663: 'GravityModel' object has no attribute 'get_top_candidates'
+[2026-01-03 01:02:45] Error processing sample 645: 'GravityModel' object has no attribute 'get_top_candidates'
+[2026-01-03 01:03:02] Error processing sample 854: 'GravityModel' object has no attribute 'get_top_candidates'
+[2026-01-03 01:03:19] Error processing sample 556: 'GravityModel' object has no attribute 'get_top_candidates'
+[2026-01-03 01:03:35] Error processing sample 121: 'GravityModel' object has no attribute 'get_top_candidates'
+[2026-01-03 01:03:35] Train Loss: 0.0000
+[2026-01-03 01:03:52] Error validating sample 99: 'GravityModel' object has no attribute 'get_top_candidates'
+[2026-01-03 01:04:10] Error validating sample 111: 'GravityModel' object has no attribute 'get_top_candidates'
+[2026-01-03 01:04:27] Error validating sample 165: 'GravityModel' object has no attribute 'get_top_candidates'
+[2026-01-03 01:04:45] Error validating sample 196: 'GravityModel' object has no attribute 'get_top_candidates'
+[2026-01-03 01:05:02] Error validating sample 102: 'GravityModel' object has no attribute 'get_top_candidates'
+[2026-01-03 01:05:02] Val Loss: 0.0000
+[2026-01-03 01:05:02] Val Acc@1: 0.0000
+[2026-01-03 01:05:02] Val Acc@3: 0.0000
+[2026-01-03 01:05:02] Val Acc@5: 0.0000
+[2026-01-03 01:05:02] Val MRR: 0.0000
+[2026-01-03 01:05:02] 
+Epoch 2/10
+[2026-01-03 01:05:02] ----------------------------------------------------------------------

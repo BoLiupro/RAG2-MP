@@ -301,7 +301,7 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 7. 日志记录：记录训练过程中的损失值、评估指标等信息，便于后续分析和调试。
 8. 所有的参数通过配置文件config.yaml进行管理和传递。
 ---
-# Prompt_3.2[完整训练流程实现]
+# Prompt_3.1[完整训练流程实现]
 ## 背景
 现在我要实现整个mobility prediction模型的训练流程。这个流程主要包括数据加载、模型初始化、训练循环、验证循环、测试循环、模型保存和日志记录等部分。
 
@@ -329,6 +329,21 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 使用config.yaml文件管理和传递所有的参数。
 - 在scripts/train.sh脚本中，添加读取config.yaml文件并传递参数给trainer.py脚本的功能。
 ---
+# Prompt_3.2[代码优化]
+## 问题
+现在我已经实现了整个mobility prediction模型的训练流程，并且进行了测试。但是在实际运行过程中，我发现有一些地方需要优化和改进：
+1、config.yaml中，没有细节参数的设置，比如LLM的max_new_tokens参数、RAG中similar sample的数量、gravity的radius等。我觉得需要把这些细节参数也添加到config.yaml中，方便统一管理和传递。
+2、我好像没有看到batch size的设置。我觉得batch size是一个很重要的参数，直接影响到训练的效率和效果。我希望能够在config.yaml中添加batch size的设置，并在trainer.py脚本中使用这个参数。
+3、需要写一个/workspace/China_Journal/util/build_rag_database.py脚本，用于构建RAG的经验池数据库。这个脚本需要读取处理好的训练集数据，利用LLM对每个样本进行编码，生成embedding表示，并将这些embedding存储到指定路径下，作为RAG的经验池数据库。
+
+## 任务
+请完成以下任务：
+1. **config.yaml优化**：
+   - 修改config.yaml文件，添加LLM的max_new_tokens参数、RAG中similar sample的数量、gravity的radius和batch size等细节参数的设置。
+2. **trainer.py优化**：
+   - 修改trainer.py脚本，使用config.yaml中添加的batch size参数。
+3. **RAG数据库构建脚本实现**：
+   - 编写build_rag_database.py脚本，实现RAG经验池数据库的构建功能。
 
 
 # 实验设计

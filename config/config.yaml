@@ -1,0 +1,74 @@
+# Configuration file for Mobility Prediction Training
+
+# Data configuration
+data:
+  city: "beijing"  # City name: beijing, shenzhen, nanchang
+  data_dir: "/workspace/China_Journal/data"
+  obs_len: 12  # Observation trajectory length
+  pred_len: 1  # Prediction trajectory length
+  max_train_samples: 1000  # Max training samples (null for all)
+  max_val_samples: 200  # Max validation samples (null for all)
+  max_test_samples: 200  # Max test samples (null for all)
+
+# Model configuration
+model:
+  llm_model_name: "Deepseek-R1-Distill-Qwen-3B"
+  llm_model_path: "/datadisk"
+  
+  # LLM generation parameters
+  max_new_tokens: 512  # Maximum tokens to generate
+  temperature: 0.7  # Sampling temperature
+  top_p: 0.9  # Nucleus sampling parameter
+  
+  # Prediction parameters
+  top_k_predictions: 10  # Number of top predictions to return
+  
+  # RAG parameters
+  rag_top_m_samples: 5  # Number of similar samples to retrieve
+  rag_database_path: "/workspace/China_Journal/util/rag_database"
+  rag_max_summary_length: 500  # Max summary length in tokens
+  
+  # Gravity model parameters
+  gravity_top_n_candidates: 5  # Number of candidates per POI category
+  gravity_weight: 1.0  # Weight parameter in gravity formula
+  gravity_radius: 10  # Search radius in grids
+  
+  # Model optimization
+  use_quantization: true  # Use 4-bit quantization
+  use_lora: false  # Use LoRA fine-tuning (set true for training)
+
+# Training configuration
+training:
+  num_epochs: 10
+  batch_size: 1  # Batch size for training (currently only supports 1)
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+  samples_per_epoch: 500  # Samples per epoch (null for all training data)
+  val_every_n_epochs: 1  # Validate every N epochs
+  save_every_n_epochs: 2  # Save checkpoint every N epochs
+  output_dir: "/workspace/China_Journal/output"
+  
+  # Advanced training options
+  gradient_accumulation_steps: 1  # Gradient accumulation
+  warmup_steps: 100  # Learning rate warmup steps
+  log_every_n_steps: 10  # Log training metrics every N steps
+
+# Validation configuration
+validation:
+  num_samples: 100  # Number of validation samples (null for all)
+  batch_size: 1  # Batch size for validation
+
+# Testing configuration
+testing:
+  num_samples: 100  # Number of test samples (null for all)
+  batch_size: 1  # Batch size for testing
+  detailed_log: true  # Whether to log detailed intermediate results
+  log_first_n_samples: 10  # Number of samples to log in detail
+
+# RAG Database Building configuration
+rag_build:
+  batch_size: 32  # Batch size for encoding samples
+  output_dir: "/workspace/China_Journal/util/rag_database"
+  save_faiss_index: true  # Whether to save FAISS index
+  overwrite: false  # Whether to overwrite existing database
