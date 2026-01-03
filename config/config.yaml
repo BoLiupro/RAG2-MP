@@ -80,7 +80,7 @@ model:
 # ============================================================================
 training:
   # Basic training parameters
-  num_epochs: 10  # Number of training epochs
+  num_epochs: 3  # Number of training epochs
   batch_size: 1  # Batch size (currently only supports 1 due to LLM constraints)
   samples_per_epoch: 500  # Samples to train per epoch (null for all training data)
   
@@ -100,7 +100,7 @@ training:
   
   # Validation and checkpointing
   val_every_n_epochs: 1  # Validate every N epochs
-  save_every_n_epochs: 2  # Save checkpoint every N epochs
+  save_every_n_epochs: 1  # Save checkpoint every N epochs
   early_stopping_patience: 5  # Early stopping patience (0 to disable)
   
   # Output paths
@@ -110,7 +110,7 @@ training:
   
   # Logging
   log_every_n_steps: 10  # Log training metrics every N steps
-  verbose: true  # Print detailed training information
+  verbose: false  # Print detailed training information
 
 # ============================================================================
 # Validation Configuration

@@ -396,6 +396,8 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 ---
 
 
+
+
 # 实验设计(后续再完善)
 1. 消融实验：变体一：不用LLM+RAG的信息(w/o RAG)；变体二：不用gravity model输出的信息(w/o Gravity)；变体三：最终不用LLM进行预测（w/o LLM Predictor).
 2. 前期准备：6.1：RAG module的经验池准备：对训练集中的所有samples进行LLM编码，得到embedding，存储下来，作为经验池；6.2:拟合gravity model的参数，选择最优的weight参数和radius参数作为实验的默认值。

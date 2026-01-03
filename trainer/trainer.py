@@ -176,8 +176,8 @@ class MobilityTrainer:
             
             # Gravity candidates
             current_location = observation[-1]['location_id']
-            candidates_by_category = self.predictor.gravity.get_top_candidates(
-                current_location=current_location
+            candidates_by_category = self.predictor.gravity.get_candidate_locations(
+                current_grid_id=current_location
             )
         
         # Build prompt for final prediction
@@ -341,7 +341,7 @@ class MobilityTrainer:
                 pbar.set_postfix({'loss': f"{loss.item():.4f}"})
                 
             except Exception as e:
-                self.log(f"Error processing sample {idx}: {e}", print_to_console=False)
+                self.log(f"Error processing sample {idx}: {e}", print_to_console=True)
                 continue
         
         metrics = {
@@ -640,7 +640,7 @@ class MobilityTrainer:
 def main():
     """Main training script."""
     parser = argparse.ArgumentParser(description='Train Mobility Prediction Model')
-    parser.add_argument('--config', type=str, required=True, help='Path to config.yaml file')
+    parser.add_argument('--config', default="/workspace/China_Journal/config/config.yaml", type=str, required=False, help='Path to config.yaml file')
     args = parser.parse_args()
     
     # Load configuration

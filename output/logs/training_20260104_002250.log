@@ -1,0 +1,21 @@
+[2026-01-04 00:22:50] Loading datasets...
+[2026-01-04 00:22:53] Train samples: 1000
+[2026-01-04 00:22:53] Validation samples: 200
+[2026-01-04 00:22:53] Test samples: 200
+[2026-01-04 00:23:15] Initializing MobilityPredictor model...
+[2026-01-04 00:23:15]   LLM Model: Deepseek-R1-Distill-Qwen-3B
+[2026-01-04 00:23:15]   RAG Top-M Samples: 5
+[2026-01-04 00:23:15]   Gravity Top-N Candidates: 5
+[2026-01-04 00:23:15]   Prediction Top-K: 10
+[2026-01-04 00:23:32] Model initialized successfully
+[2026-01-04 00:23:32] 
+======================================================================
+[2026-01-04 00:23:32] STARTING TRAINING
+[2026-01-04 00:23:32] ======================================================================
+[2026-01-04 00:23:32] 
+Epoch 1/3
+[2026-01-04 00:23:32] ----------------------------------------------------------------------
+[2026-01-04 00:24:06] Error processing sample 707: 'GravityModel' object has no attribute 'get_top_candidates'
+[2026-01-04 00:24:32] Error processing sample 76: 'GravityModel' object has no attribute 'get_top_candidates'
+[2026-01-04 00:24:54] Error processing sample 385: 'GravityModel' object has no attribute 'get_top_candidates'
+[2026-01-04 00:25:18] Error processing sample 473: 'GravityModel' object has no attribute 'get_top_candidates'
