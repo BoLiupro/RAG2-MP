@@ -48,8 +48,6 @@ class MobilityLLM:
         self.device = device
         self.use_lora = use_lora
         
-        print(f"Loading LLM from {self.model_path}...")
-        
         # Configure quantization
         if use_quantization and torch.cuda.is_available():
             bnb_config = BitsAndBytesConfig(
@@ -58,10 +56,8 @@ class MobilityLLM:
                 bnb_4bit_compute_dtype=torch.float16,
                 bnb_4bit_use_double_quant=True
             )
-            print("Using 4-bit quantization")
         else:
             bnb_config = None
-            print("Running without quantization")
         
         # Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(
@@ -86,7 +82,6 @@ class MobilityLLM:
         
         # Apply LoRA if requested
         if use_lora:
-            print("Applying LoRA configuration...")
             lora_config = LoraConfig(
                 task_type=TaskType.CAUSAL_LM,
                 r=lora_r,
@@ -99,7 +94,6 @@ class MobilityLLM:
             self.model.print_trainable_parameters()
         
         self.model.eval()
-        print(f"LLM loaded successfully on {self.device}")
     
     def generate(
         self,
@@ -333,12 +327,8 @@ class MobilityLLM:
         prompt += "\nBased on these patterns, summarize the likely next destination:"
         
         # Print prompt if requested
-        if print_prompt:
-            print(f"\n{'='*70}")
-            print("PROMPT SENT TO LLM (RAG Summary Generation):")
-            print(f"{'='*70}")
-            print(prompt)
-            print(f"{'='*70}\n")
+        # print_prompt parameter is for trainer to control logging
+        # Model code does not print
         
         # Tokenize and generate
         inputs = self.tokenizer(
@@ -459,15 +449,9 @@ class MobilityLLM:
         """Save the model (especially useful if using LoRA)."""
         if self.use_lora:
             self.model.save_pretrained(save_path)
-            print(f"LoRA model saved to {save_path}")
-        else:
-            print("Model saving only supported for LoRA fine-tuned models")
     
     def load_lora_weights(self, lora_path: str):
         """Load LoRA weights from a saved checkpoint."""
         if self.use_lora:
             from peft import PeftModel
             self.model = PeftModel.from_pretrained(self.model, lora_path)
-            print(f"LoRA weights loaded from {lora_path}")
-        else:
-            print("LoRA not enabled. Cannot load LoRA weights.")

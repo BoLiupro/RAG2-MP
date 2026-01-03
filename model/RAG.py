@@ -50,11 +50,6 @@ class MobilityRAG:
         self.database_samples = None
         self.poi_data = None
         self.faiss_index = None
-        
-        print(f"Initialized MobilityRAG for {city}")
-        print(f"RAG database path: {rag_database_path}")
-        print(f"Retrieving top-{rag_top_m_samples} similar samples")
-        print(f"Verbose mode: {verbose}")
     
     def _build_faiss_index(self):
         """
@@ -72,8 +67,6 @@ class MobilityRAG:
         
         # Add embeddings to index
         self.faiss_index.add(self.database_embeddings.astype('float32'))
-        
-        print(f"Built FAISS index with {self.faiss_index.ntotal} vectors")
     
     def load_rag_database(self, embedding_file: str = "embeddings.npy", 
                           samples_file: str = "samples.pkl"):
@@ -89,31 +82,22 @@ class MobilityRAG:
         faiss_index_path = os.path.join(self.rag_database_path, self.city, "faiss_index.bin")
         
         if not os.path.exists(embedding_path):
-            print(f"Warning: RAG database not found at {embedding_path}")
-            print("Please build the RAG database first using the trainer script.")
             return False
-        
-        print(f"Loading RAG database from {self.rag_database_path}...")
         
         # Load embeddings
         self.database_embeddings = np.load(embedding_path)
-        print(f"Loaded {self.database_embeddings.shape[0]} embeddings")
         
         # Load samples metadata
         with open(samples_path, 'rb') as f:
             self.database_samples = pickle.load(f)
-        print(f"Loaded {len(self.database_samples)} samples")
         
         # Load or build FAISS index
         if os.path.exists(faiss_index_path):
             self.faiss_index = faiss.read_index(faiss_index_path)
-            print(f"Loaded FAISS index from {faiss_index_path}")
         else:
-            print(f"Building FAISS index...")
             self._build_faiss_index()
             # Save FAISS index
             faiss.write_index(self.faiss_index, faiss_index_path)
-            print(f"Saved FAISS index to {faiss_index_path}")
         
         return True
     
@@ -127,10 +111,8 @@ class MobilityRAG:
         import pandas as pd
         
         if not os.path.exists(poi_file):
-            print(f"Warning: POI file not found at {poi_file}")
             return False
         
-        print(f"Loading POI data from {poi_file}...")
         poi_df = pd.read_csv(poi_file)
         
         # Convert to dictionary format: {location_id: {poi_type: percentage}}
@@ -147,7 +129,6 @@ class MobilityRAG:
                 poi_features[poi_type] = row[col]
             self.poi_data[grid_id] = poi_features
         
-        print(f"Loaded POI data for {len(self.poi_data)} locations")
         return True
     
     def compute_similarity(

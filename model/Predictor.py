@@ -64,19 +64,7 @@ class MobilityPredictor:
         self.gravity_radius = gravity_radius
         self.verbose = verbose
         
-        print(f"\n{'='*70}")
-        print("Initializing MobilityPredictor")
-        print(f"{'='*70}")
-        print(f"City: {city}")
-        print(f"Top-K Predictions: {top_k_predictions}")
-        print(f"RAG Top-M Samples: {rag_top_m_samples}")
-        print(f"Gravity Top-N per Category: {gravity_top_n_candidates}")
-        print(f"Gravity weight: {gravity_weight}")
-        print(f"Gravity radius: {gravity_radius}")
-        print(f"Verbose mode: {verbose}")
-        
         # Initialize LLM
-        print(f"\nStep 1: Initializing LLM...")
         self.llm = MobilityLLM(
             model_name=llm_model_name,
             model_path=llm_model_path,
@@ -85,7 +73,6 @@ class MobilityPredictor:
         )
         
         # Initialize RAG module
-        print(f"\nStep 2: Initializing RAG module...")
         self.rag = MobilityRAG(
             llm=self.llm,
             rag_database_path=rag_database_path,
@@ -95,21 +82,16 @@ class MobilityPredictor:
         )
         
         # Load RAG database
-        if self.rag.load_rag_database():
-            print("✓ RAG database loaded successfully")
-        else:
-            print("⚠ Warning: RAG database not loaded")
+        self.rag.load_rag_database()
         
         # Set POI data path
         if poi_data_path is None:
-            poi_data_path = f"/workspace/China_Journal/raw_data/{city}/{city}_grid_poi.csv"
+            poi_data_path = f"/workspace/China_Journal/data/{city}/poi.csv"
         
         # Load POI data for RAG
-        if self.rag.load_poi_data(poi_data_path):
-            print("✓ POI data loaded for RAG")
+        self.rag.load_poi_data(poi_data_path)
         
         # Initialize Gravity Model
-        print(f"\nStep 3: Initializing Gravity Model...")
         self.gravity = GravityModel(
             poi_data_path=poi_data_path,
             city=city,
@@ -117,10 +99,6 @@ class MobilityPredictor:
             gravity_top_n_candidates=gravity_top_n_candidates,
             radius=gravity_radius
         )
-        
-        print(f"\n{'='*70}")
-        print("MobilityPredictor initialized successfully!")
-        print(f"{'='*70}\n")
     
     def predict(
         self,
@@ -144,87 +122,29 @@ class MobilityPredictor:
         if print_prompt is None:
             print_prompt = self.verbose
         
-        print(f"\n{'='*70}")
-        print("Making Mobility Prediction")
-        print(f"{'='*70}")
-        
-        # Display observation trajectory
-        print(f"\nObservation Trajectory ({len(observation_trajectory)} points):")
-        for i, point in enumerate(observation_trajectory, 1):
-            loc_id = point.get('location_id', 'unknown')
-            timestamp = point.get('timestamp', '')
-            print(f"  {i}. Location {loc_id} at {timestamp}")
-        
         current_location = observation_trajectory[-1]['location_id']
-        print(f"\nCurrent Location: Grid {current_location}")
-        
-        if ground_truth is not None:
-            print(f"Ground Truth Next Location: Grid {ground_truth}")
         
         # Step 1: Get RAG summary
-        print(f"\n{'='*70}")
-        print("Step 1: Retrieving Similar Trajectories (RAG)")
-        print(f"{'='*70}")
-        
         rag_summary, similar_samples, similarities = self.rag.generate_rag_summary(
             query_trajectory=observation_trajectory,
             rag_top_m_samples=self.rag_top_m_samples,
             print_prompt=print_prompt
         )
         
-        print(f"\n✓ Retrieved {len(similar_samples)} similar samples")
-        print(f"  Top similarity: {similarities[0]:.4f}")
-        
         # Step 2: Get candidate locations from Gravity Model
-        print(f"\n{'='*70}")
-        print("Step 2: Generating Candidate Locations (Gravity Model)")
-        print(f"{'='*70}")
-        
         candidates_by_category = self.gravity.get_candidate_locations(
             current_grid_id=current_location,
             return_scores=True,
             include_current=True  # Include current location for stationary behavior
         )
         
-        print(f"\n✓ Generated {len(candidates_by_category)} POI category groups")
-        print(f"  Each category has top-{self.gravity_top_n_candidates} candidates (including current location)")
-        
-        # Display sample candidates
-        print(f"\nSample Candidates (top 3 categories):")
-        sample_categories = list(candidates_by_category.keys())[:3]
-        for category in sample_categories:
-            category_display = category.replace('_count', '')
-            candidates = candidates_by_category[category]
-            print(f"  {category_display}: {[c[0] for c in candidates[:3]]}")
-        
         # Step 3: Make final prediction using LLM
-        print(f"\n{'='*70}")
-        print("Step 3: Final Prediction (LLM)")
-        print(f"{'='*70}")
-        
         predictions = self._generate_final_prediction(
             observation_trajectory=observation_trajectory,
             rag_summary=rag_summary,
             candidates_by_category=candidates_by_category,
             print_prompt=print_prompt
         )
-        
-        # Display predictions
-        print(f"\n✓ Final Predictions (Top-{self.top_k_predictions}):")
-        for i, (loc_id, confidence) in enumerate(predictions, 1):
-            match_indicator = "✓" if ground_truth is not None and loc_id == ground_truth else " "
-            print(f"  {match_indicator} {i}. Grid {loc_id} - Confidence: {confidence:.4f}")
-        
-        # Check if ground truth is in predictions
-        if ground_truth is not None:
-            predicted_locations = [loc_id for loc_id, _ in predictions]
-            if ground_truth in predicted_locations:
-                rank = predicted_locations.index(ground_truth) + 1
-                print(f"\n✓ Ground truth found at rank {rank}")
-            else:
-                print(f"\n✗ Ground truth not in top-{self.top_k_predictions} predictions")
-        
-        print(f"{'='*70}\n")
         
         # Prepare results dictionary
         results = {
@@ -265,13 +185,8 @@ class MobilityPredictor:
             candidates_by_category
         )
         
-        # Print prompt if requested
-        if print_prompt:
-            print(f"\n{'='*70}")
-            print("PROMPT SENT TO LLM (Final Prediction):")
-            print(f"{'='*70}")
-            print(prompt)
-            print(f"{'='*70}\n")
+        # print_prompt parameter is for trainer to control logging
+        # Model code does not print
         
         # Get all unique candidate locations
         all_candidates = set()
@@ -325,6 +240,29 @@ class MobilityPredictor:
         
         return predictions
     
+    def _build_prediction_prompt(
+        self,
+        observation_trajectory: List[Dict[str, Any]],
+        rag_summary: str,
+        candidates_by_category: Dict[str, List[Tuple[int, float]]]
+    ) -> str:
+        """
+        Public alias for _build_final_prediction_prompt for compatibility.
+        
+        Args:
+            observation_trajectory: Observation trajectory
+            rag_summary: Summary from RAG retrieval
+            candidates_by_category: Candidates grouped by POI category
+        
+        Returns:
+            Formatted prompt string
+        """
+        return self._build_final_prediction_prompt(
+            observation_trajectory,
+            rag_summary,
+            candidates_by_category
+        )
+    
     def _build_final_prediction_prompt(
         self,
         observation_trajectory: List[Dict[str, Any]],
@@ -374,8 +312,8 @@ class MobilityPredictor:
         # Show top 5 categories with their candidates and distances
         category_count = 0
         for category, candidates in candidates_by_category.items():
-            if category_count >= 5:  # Limit to top 5 categories to avoid prompt length
-                break
+            # if category_count >= 5:  # Limit to top 5 categories to avoid prompt length
+            #     break
             
             category_display = category.replace('_count', '')
             candidate_str = format_candidates_with_distances(

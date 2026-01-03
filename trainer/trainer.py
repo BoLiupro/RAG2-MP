@@ -100,16 +100,42 @@ class MobilityTrainer:
         """Initialize the MobilityPredictor model."""
         self.log("Initializing MobilityPredictor model...")
         
+        # Support both old and new config formats for backward compatibility
+        model_config = self.config['model']
+        if 'llm' in model_config:  # New format
+            llm_model_name = model_config['llm']['model_name']
+            llm_model_path = model_config['llm']['model_path']
+            use_quantization = model_config['llm']['use_quantization']
+            rag_top_m_samples = model_config['rag']['top_m_samples']
+            gravity_top_n_candidates = model_config['gravity']['top_n_candidates']
+            gravity_weight = model_config['gravity']['weight']
+            gravity_radius = model_config['gravity']['radius']
+            top_k_predictions = model_config['prediction']['top_k_predictions']
+        else:  # Old format
+            llm_model_name = model_config['llm_model_name']
+            llm_model_path = model_config['llm_model_path']
+            use_quantization = model_config['use_quantization']
+            rag_top_m_samples = model_config['rag_top_m_samples']
+            gravity_top_n_candidates = model_config['gravity_top_n_candidates']
+            gravity_weight = model_config['gravity_weight']
+            gravity_radius = model_config['gravity_radius']
+            top_k_predictions = model_config['top_k_predictions']
+        
+        self.log(f"  LLM Model: {llm_model_name}")
+        self.log(f"  RAG Top-M Samples: {rag_top_m_samples}")
+        self.log(f"  Gravity Top-N Candidates: {gravity_top_n_candidates}")
+        self.log(f"  Prediction Top-K: {top_k_predictions}")
+        
         self.predictor = MobilityPredictor(
-            llm_model_name=self.config['model']['llm_model_name'],
-            llm_model_path=self.config['model']['llm_model_path'],
+            llm_model_name=llm_model_name,
+            llm_model_path=llm_model_path,
             city=self.config['data']['city'],
-            top_k_predictions=self.config['model']['top_k_predictions'],
-            rag_top_m_samples=self.config['model']['rag_top_m_samples'],
-            gravity_top_n_candidates=self.config['model']['gravity_top_n_candidates'],
-            gravity_weight=self.config['model']['gravity_weight'],
-            gravity_radius=self.config['model']['gravity_radius'],
-            use_quantization=self.config['model']['use_quantization'],
+            top_k_predictions=top_k_predictions,
+            rag_top_m_samples=rag_top_m_samples,
+            gravity_top_n_candidates=gravity_top_n_candidates,
+            gravity_weight=gravity_weight,
+            gravity_radius=gravity_radius,
+            use_quantization=use_quantization,
             verbose=False  # Disable verbose during training
         )
         

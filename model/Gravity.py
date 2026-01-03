@@ -66,9 +66,7 @@ class GravityModel:
             'Dining & Cusine_count'  # Note: 'Cusine' is spelled this way in the data
         ]
         
-        print(f"Initialized GravityModel for {city}")
-        print(f"Parameters: weight={weight}, gravity_top_n_candidates={gravity_top_n_candidates}, radius={radius}")
-        print(f"Loaded POI data for {len(self.poi_data)} locations")
+        self.poi_data = self._load_poi_data(poi_data_path)
     
     def _load_poi_data(self, poi_data_path: str) -> pd.DataFrame:
         """
@@ -84,7 +82,6 @@ class GravityModel:
             raise FileNotFoundError(f"POI data file not found: {poi_data_path}")
         
         df = pd.read_csv(poi_data_path)
-        print(f"Loaded POI data from {poi_data_path}")
         
         return df
     
@@ -324,36 +321,9 @@ class GravityModel:
         Args:
             current_grid_id: Current location grid ID
         """
-        current_row, current_col = self._grid_id_to_coordinates(current_grid_id)
-        
-        print(f"\n{'='*70}")
-        print(f"Candidate Locations for Current Grid: {current_grid_id}")
-        print(f"Current Position: (row={current_row}, col={current_col})")
-        print(f"Search Radius: {self.radius} grids")
-        print(f"{'='*70}")
-        
-        candidates = self.get_candidate_locations(current_grid_id, return_scores=True)
-        
-        for category, top_grids in candidates.items():
-            print(f"\n{category}:")
-            for i, (grid_id, score) in enumerate(top_grids, 1):
-                row, col = self._grid_id_to_coordinates(grid_id)
-                distance = self._calculate_distance(current_grid_id, grid_id)
-                print(f"  {i}. Grid {grid_id} (row={row}, col={col}) - "
-                      f"Score: {score:.4f}, Distance: {distance:.2f}")
-        
-        print(f"\n{'='*70}")
-        
-        # Print top-k overall candidates
-        print(f"\nTop-{self.gravity_top_n_candidates} Overall Candidates (by average score):")
-        top_k_candidates = self.get_top_k_candidates(current_grid_id, k=self.gravity_top_n_candidates)
-        for i, (grid_id, avg_score) in enumerate(top_k_candidates, 1):
-            row, col = self._grid_id_to_coordinates(grid_id)
-            distance = self._calculate_distance(current_grid_id, grid_id)
-            print(f"  {i}. Grid {grid_id} (row={row}, col={col}) - "
-                  f"Avg Score: {avg_score:.4f}, Distance: {distance:.2f}")
-        
-        print(f"{'='*70}\n")
+        # Display method does not print in model code
+        # This method is kept for backwards compatibility but does nothing
+        pass
     
     def get_statistics(self) -> Dict[str, any]:
         """
@@ -375,16 +345,6 @@ class GravityModel:
     
     def print_statistics(self):
         """Print gravity model statistics."""
-        stats = self.get_statistics()
-        
-        print(f"\n{'='*50}")
-        print("Gravity Model Statistics")
-        print(f"{'='*50}")
-        print(f"City: {stats['city']}")
-        print(f"Weight Parameter: {stats['weight']}")
-        print(f"Gravity Top-N Candidates per Category: {stats['gravity_top_n_candidates']}")
-        print(f"Search Radius: {stats['radius']} grids")
-        print(f"Grid System: {stats['grid_size']}x{stats['grid_size']} = {stats['total_grids']} grids")
-        print(f"POI Categories: {stats['poi_categories']}")
-        print(f"POI Locations: {stats['poi_locations']}")
-        print(f"{'='*50}\n")
+        # Print method does not print in model code
+        # This method is kept for backwards compatibility but does nothing
+        pass

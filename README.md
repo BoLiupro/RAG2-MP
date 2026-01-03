@@ -329,7 +329,7 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 使用config.yaml文件管理和传递所有的参数。
 - 在scripts/train.sh脚本中，添加读取config.yaml文件并传递参数给trainer.py脚本的功能。
 ---
-# Prompt_3.2[代码优化]
+# Prompt_3.2[代码优化1]
 ## 问题
 现在我已经实现了整个mobility prediction模型的训练流程，并且进行了测试。但是在实际运行过程中，我发现有一些地方需要优化和改进：
 1、config.yaml中，没有细节参数的设置，比如LLM的max_new_tokens参数、RAG中similar sample的数量、gravity的radius等。我觉得需要把这些细节参数也添加到config.yaml中，方便统一管理和传递。
@@ -344,8 +344,72 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
    - 修改trainer.py脚本，使用config.yaml中添加的batch size参数。
 3. **RAG数据库构建脚本实现**：
    - 编写build_rag_database.py脚本，实现RAG经验池数据库的构建功能。
+# Prompt_3.3[代码优化2]
+## 背景
+现在我已经实现了整个mobility prediction模型的训练流程，并且进行了测试。但是现在与信息打印的代码我觉得应该优化调整一下。我希望模型(model下的文件)代码不要打印太多的信息，主要是把信息打印的功能放在trainer.py和detailed_trainer.py脚本中，这样可以更好地控制打印的信息内容和格式。此外，我觉得config.yaml中的参数仍然不够全面，我希望能够添加更多的参数设置，方便后续的调整和优化。
+
+## 任务
+请完成以下任务：
+1. **信息打印优化**：
+   - 修改模型代码中的信息打印部分，模型代码中不要打印信息。
+   - 在trainer.py脚本中，添加详细的信息打印功能，确保能够打印训练过程中的损失值、评估指标、训练进程等关键训练信息。
+   - 在detailed_trainer.py脚本中，添加更详细的信息打印功能，确保能够打印每个阶段的中间结果，包括两个阶段的prompts, rag_summary, gravity_candidates, final_predictions等，方便调试和分析。此外，detailed_trainer.py中不使用整个数据集，而是使用一个小的子集进行快速测试和调试。
+2. **config.yaml优化**：
+   - 修改config.yaml文件，添加更多的参数设置，涵盖模型训练和评估的各个方面。我觉得config.yaml中的参数应该包括：
+       - 数据集相关参数：城市、训练集、验证集、测试集路径，obs_len, pred_len、使用的sample数量等。
+       - LLM相关参数：文件位置、max_new_tokens, temperature, top_p、top_k_predictions等。
+       - RAG相关参数：similar sample的数量rag_top_m_samples, 经验池路径、rag_max_summary_length等。
+       - Gravity Model相关参数：radius, weight, 候选位置数量gravity_top_n_candidates等。
+       - 训练相关参数：batch size, 学习率, epoch数量, 评估指标等。
+       - 其他相关参数：日志记录路径, 模型保存路径等。
+
+## 约束
+- 使用Python编程语言。
+- 保持原有脚本的结构和逻辑，尽量只修改必要的部分。
+- 过程中需要有适当的注释和过程打印。
+- Config.yaml中的参数命名要清晰明确，能够准确表达参数的含义。RAG、LLM、Gravity的参数都放在model配置项下，但要区分开来。   
+
+## 输出格式
+- 提交修改后的trainer.py和detailed_trainer.py脚本文件。
+- 提交修改后的config.yaml文件。
+---
+# Prompt_3.4[框架结构调整：Gravity结果summary，RAG模块prompt优化，DetailedTrainer打印信息调整]
+## 背景
+现在我觉得Gravity模块的输出结果还可以再利用LLM进行一个总结概括summary，这样可以帮助最终预测模块更好地理解和利用这些候选位置进行预测。此外，我觉得RAG模块中的prompt设计还可以优化一下，确保能够更好地引导LLM生成有用的summary。最后，我觉得detailed_trainer.py脚本中的打印信息还可以调整一下，确保打印的信息更加清晰和有用，现在“Retrieved 5 similar samples (using FAISS):
+  1. Similarity: 0.9911, Next location: 21, Index: 6
+  2. Similarity: 0.9911, Next location: 21, Index: 11
+  3. Similarity: 0.9909, Next location: 21, Index: 8
+  4. Similarity: 0.9908, Next location: 21, Index: 7
+  5. Similarity: 0.9908, Next location: 21, Index: 9
+Warning: LLM synthesis failed: LLM produced reasoning text instead of summary
+Falling back to structured summary...”这一块的信息让我觉得很混乱。已经给出了最后的prompt，应该是LLM回答的时候了，为什么又突然打印了rag的similarity、sample的信息。我觉得rag sample相关的信息打印的太了。
+
+## 任务
+请完成以下任务：
+1. **Gravity结果summary实现**：
+   - 修改Gravity.py脚本，添加一个summary生成的功能。
+   - 在summary生成的功能中，接收Gravity Model模块的输出结果，即每个POI类别下的top-n候选位置。
+   - 设计一个合适的prompt，将这些候选位置的信息整合进去，输入到LLM中，得到一个“基于Gravity Model的候选位置总结概括summary”。
+   - 确保修改后的Gravity.py脚本能够正确生成summary，并将其作为输出返回。
+2. **RAG模块prompt优化**：
+   - 修改RAG.py脚本中的prompt设计，确保能够更好地引导LLM生成有用的summary。尽量防止“Warning: LLM synthesis failed: LLM produced reasoning text instead of summary. Falling back to structured summary...”的情况发生。
+3. **DetailedTrainer打印信息调整**：
+   - 修改detailed_trainer.py脚本中的打印信息，确保打印的信息更加清晰和有用。
 
 
-# 实验设计
+## 约束
+- 使用Python编程语言。
+- 使用之前编写的LLM.py脚本中的类和函数。
+- 先专注于框架的搭建，训练流程。
+- 打印信息在detailed_trainer.py脚本中进行。
+
+## 输出格式
+- 提交修改后的Gravity.py脚本文件。
+- 修改后的Gravity.py脚本中，包括Gravity结果summary生成的功能。输入参数包括Gravity Model模块的输出结果，即每个POI类别下的top-n候选位置。
+- 提交修改后的RAG.py脚本文件。
+- 提交修改后的detailed_trainer.py脚本文件。
+---
+
+# 实验设计(后续再完善)
 1. 消融实验：变体一：不用LLM+RAG的信息(w/o RAG)；变体二：不用gravity model输出的信息(w/o Gravity)；变体三：最终不用LLM进行预测（w/o LLM Predictor).
 2. 前期准备：6.1：RAG module的经验池准备：对训练集中的所有samples进行LLM编码，得到embedding，存储下来，作为经验池；6.2:拟合gravity model的参数，选择最优的weight参数和radius参数作为实验的默认值。
