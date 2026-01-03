@@ -125,7 +125,7 @@ def calculate_grid_distance(grid_id_1: int, grid_id_2: int, city: str = 'beijing
     
     # Avoid division by zero (for current location itself)
     if distance < 0.01:  # Less than 10 meters
-        distance = 0.01
+        distance = 8.8
     
     return distance
 

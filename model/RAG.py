@@ -8,6 +8,8 @@ import numpy as np
 import torch
 import pickle
 import os
+import json
+import re
 import faiss
 from typing import List, Dict, Any, Tuple
 from tqdm import tqdm
@@ -224,10 +226,10 @@ class MobilityRAG:
             query_trajectory, rag_top_m_samples
         )
         
-        print(f"\nRetrieved {len(similar_samples)} similar samples (using FAISS):")
-        for i, (sample, sim, idx) in enumerate(zip(similar_samples, similarities, indices), 1):
-            next_loc = sample.get('next_location', 'unknown')
-            print(f"  {i}. Similarity: {sim:.4f}, Next location: {next_loc}, Index: {idx}")
+        # print(f"\nRetrieved {len(similar_samples)} similar samples (using FAISS):")
+        # for i, (sample, sim, idx) in enumerate(zip(similar_samples, similarities, indices), 1):
+        #     next_loc = sample.get('next_location', 'unknown')
+        #     print(f"  {i}. Similarity: {sim:.4f}, Next location: {next_loc}, Index: {idx}")
         
         # Generate structured summary with location-based grouping
         summary = self._generate_structured_summary(
@@ -349,24 +351,28 @@ class MobilityRAG:
         
         context = "\n".join(context_lines)
         
-        # Structured synthesis prompt with clear template
-        synthesis_prompt = f"""Analyze the following mobility patterns and provide a structured summary.
+        # Structured synthesis prompt with JSON format requirement
+        synthesis_prompt = f"""Analyze the following mobility patterns and provide a structured summary in JSON format.
 
 {context}
 
-Provide your analysis in exactly this format:
+You must respond with ONLY a valid JSON object in this exact format (no additional text, explanations, or markdown):
 
-**Next Locations (Top 5):**
-- Grid [ID]: [frequency] patterns, [distance] km, [area type if available]
-  Reason: [why this location is likely]
+{{
+  "next_locations": [
+    {{
+      "grid_id": <grid_id>,
+      "frequency": <number>,
+      "distance_km": <number>,
+      "area_type": "<poi_types or 'N/A'>",
+      "reason": "<concise reason why this location is likely>"
+    }}
+  ],
+  "spatial_patterns": "<describe distance trends and area characteristics in 1-2 sentences>",
+  "temporal_patterns": "<describe time patterns in 1-2 sentences, or 'No clear temporal pattern'>"
+}}
 
-**Spatial Patterns:**
-[Describe distance trends and area characteristics in 1-2 sentences]
-
-**Temporal Patterns:**
-[Describe time-of-day and day-of-week patterns in 1-2 sentences, or state "No clear temporal pattern" if insufficient data]
-
-Keep your response concise and under 150 words total."""
+Include top 3-5 next locations. Keep total response under 200 words."""
         
         if print_prompt:
             print(f"\n{'='*70}")
@@ -375,77 +381,210 @@ Keep your response concise and under 150 words total."""
             print(synthesis_prompt)
             print(f"{'='*70}\n")
         
-        # Generate summary using LLM
+        # Generate summary using LLM with JSON format
         try:
-            summary = self.llm.generate(
+            llm_response = self.llm.generate(
                 prompt=synthesis_prompt,
-                max_new_tokens=min(max_summary_length, 400),  # Increased to 400 for complete output
+                max_new_tokens=min(max_summary_length, 500),  # Increased for JSON output
                 temperature=0.1,  # Very low temperature for structured output
                 do_sample=False  # Disable sampling for more deterministic output
             )
             
             # Clean up the response
-            summary = summary.strip()
+            llm_response = llm_response.strip()
             
-            # If summary is too short or seems incomplete, use fallback
-            if len(summary) < 50 or "Alright" in summary or "I need to" in summary:
-                raise Exception("LLM produced reasoning text instead of summary")
+            if print_prompt:
+                print(f"\n{'='*70}")
+                print("LLM RAW RESPONSE:")
+                print(f"{'='*70}")
+                print(llm_response)
+                print(f"{'='*70}\n")
+            
+            # Parse JSON response
+            summary_json = self._parse_json_response(llm_response)
+            
+            # Convert JSON to formatted text for downstream use
+            summary = self._format_json_to_text(summary_json)
             
         except Exception as e:
-            print(f"Warning: LLM synthesis failed: {e}")
+            print(f"Warning: LLM synthesis or JSON parsing failed: {e}")
             print("Falling back to structured summary...")
             
-            # Fallback: structured summary without LLM
-            summary_lines = []
-            summary_lines.append(f"Based on {len(similar_samples)} similar {mobility_mode} patterns:")
-            summary_lines.append("\n**Next Locations (Top 3):**")
-            
-            for i, stat in enumerate(location_stats[:3], 1):
-                reason_parts = []
-                if stat['frequency'] > 1:
-                    reason_parts.append(f"{stat['frequency']} historical visits")
-                if stat['distance_km'] < 2:
-                    reason_parts.append("close proximity")
-                elif stat['distance_km'] > 10:
-                    reason_parts.append("long-distance movement")
-                if stat['poi_types']:
-                    reason_parts.append(f"{stat['poi_types'][0]} area")
-                
-                reason = ", ".join(reason_parts) if reason_parts else "similar pattern match"
-                
-                line = f"- Grid {stat['grid_id']}: {stat['frequency']} patterns, {stat['distance_km']:.2f} km"
-                if stat['poi_types']:
-                    line += f", {', '.join(stat['poi_types'])}"
-                line += f"\n  Reason: {reason}"
-                summary_lines.append(line)
-            
-            # Spatial patterns
-            avg_dist = np.mean([s['distance_km'] for s in location_stats[:3]])
-            poi_diversity = len(set([p for s in location_stats[:3] for p in s['poi_types']]))
-            summary_lines.append(f"\n**Spatial Patterns:**")
-            summary_lines.append(f"Average distance {avg_dist:.2f} km. ")
-            if poi_diversity > 1:
-                summary_lines.append(f"Diverse area types ({poi_diversity} categories).")
-            else:
-                summary_lines.append("Consistent area type preference.")
-            
-            # Temporal patterns
-            summary_lines.append(f"\n**Temporal Patterns:**")
-            if location_stats[0]['timestamps']:
-                summary_lines.append("Patterns observed on weekdays during midday hours.")
-            else:
-                summary_lines.append("Insufficient temporal data for pattern analysis.")
-            
-            summary = "\n".join(summary_lines)
+            # Fallback: create JSON structure directly from data
+            summary_json = self._create_fallback_json(location_stats, mobility_mode, len(similar_samples))
+            summary = self._format_json_to_text(summary_json)
         
         if print_prompt:
             print(f"\n{'='*70}")
-            print("GENERATED SUMMARY:")
+            print("GENERATED SUMMARY (TEXT FORMAT):")
             print(f"{'='*70}")
             print(summary)
             print(f"{'='*70}\n")
         
         return summary
+    
+    def _parse_json_response(self, llm_response: str) -> Dict[str, Any]:
+        """
+        Parse JSON response from LLM output.
+        Handles various formats including markdown code blocks.
+        
+        Args:
+            llm_response: Raw response from LLM
+            
+        Returns:
+            Parsed JSON dictionary
+        """
+        # Remove markdown code blocks if present
+        llm_response = re.sub(r'```json\s*', '', llm_response)
+        llm_response = re.sub(r'```\s*', '', llm_response)
+        
+        # Remove any leading/trailing whitespace
+        llm_response = llm_response.strip()
+        
+        # Try to find JSON object in the response
+        # Look for content between first { and last }
+        start_idx = llm_response.find('{')
+        end_idx = llm_response.rfind('}')
+        
+        if start_idx == -1 or end_idx == -1:
+            raise ValueError("No JSON object found in LLM response")
+        
+        json_str = llm_response[start_idx:end_idx + 1]
+        
+        try:
+            summary_json = json.loads(json_str)
+        except json.JSONDecodeError as e:
+            # Try to fix common JSON errors
+            # Replace single quotes with double quotes
+            json_str = json_str.replace("'", '"')
+            try:
+                summary_json = json.loads(json_str)
+            except:
+                raise ValueError(f"Failed to parse JSON: {e}")
+        
+        # Validate required fields
+        required_fields = ['next_locations', 'spatial_patterns', 'temporal_patterns']
+        for field in required_fields:
+            if field not in summary_json:
+                raise ValueError(f"Missing required field: {field}")
+        
+        return summary_json
+    
+    def _format_json_to_text(self, summary_json: Dict[str, Any]) -> str:
+        """
+        Convert JSON summary to formatted text for downstream use.
+        
+        Args:
+            summary_json: Parsed JSON dictionary
+            
+        Returns:
+            Formatted text summary
+        """
+        summary_lines = []
+        
+        # Next locations section
+        summary_lines.append("**Next Locations:**")
+        next_locs = summary_json.get('next_locations', [])
+        for i, loc in enumerate(next_locs, 1):
+            grid_id = loc.get('grid_id', 'N/A')
+            
+            # Handle type conversion - LLM might return strings instead of numbers
+            freq_raw = loc.get('frequency', 0)
+            freq = int(freq_raw) if isinstance(freq_raw, (int, float)) else (int(freq_raw) if str(freq_raw).isdigit() else 0)
+            
+            dist_raw = loc.get('distance_km', 0)
+            try:
+                dist = float(dist_raw) if isinstance(dist_raw, (int, float, str)) else 0
+            except (ValueError, TypeError):
+                dist = 0.0
+            
+            area = loc.get('area_type', 'N/A')
+            reason = loc.get('reason', 'Similar pattern match')
+            
+            line = f"- Grid {grid_id}: {freq} patterns, {dist:.2f} km"
+            if area and area != 'N/A':
+                line += f", {area}"
+            line += f"\n  Reason: {reason}"
+            summary_lines.append(line)
+        
+        # Spatial patterns section
+        spatial = summary_json.get('spatial_patterns', 'No spatial pattern information')
+        summary_lines.append(f"\n**Spatial Patterns:**")
+        summary_lines.append(spatial)
+        
+        # Temporal patterns section
+        temporal = summary_json.get('temporal_patterns', 'No temporal pattern information')
+        summary_lines.append(f"\n**Temporal Patterns:**")
+        summary_lines.append(temporal)
+        
+        return "\n".join(summary_lines)
+    
+    def _create_fallback_json(
+        self,
+        location_stats: List[Dict[str, Any]],
+        mobility_mode: str,
+        num_samples: int
+    ) -> Dict[str, Any]:
+        """
+        Create fallback JSON structure when LLM fails.
+        
+        Args:
+            location_stats: Location statistics
+            mobility_mode: Mode of mobility (car, phone, etc.)
+            num_samples: Number of similar samples
+            
+        Returns:
+            JSON dictionary with summary structure
+        """
+        # Build next locations list
+        next_locations = []
+        for i, stat in enumerate(location_stats[:5], 1):
+            reason_parts = []
+            if stat['frequency'] > 1:
+                reason_parts.append(f"{stat['frequency']} historical visits")
+            if stat['distance_km'] < 2:
+                reason_parts.append("close proximity")
+            elif stat['distance_km'] > 10:
+                reason_parts.append("long-distance movement")
+            if stat['poi_types']:
+                reason_parts.append(f"{stat['poi_types'][0]} area")
+            
+            reason = ", ".join(reason_parts) if reason_parts else "similar pattern match"
+            area_type = ", ".join(stat['poi_types']) if stat['poi_types'] else "N/A"
+            
+            next_locations.append({
+                "grid_id": stat['grid_id'],
+                "frequency": stat['frequency'],
+                "distance_km": round(stat['distance_km'], 2),
+                "area_type": area_type,
+                "reason": reason
+            })
+        
+        # Spatial patterns
+        if location_stats:
+            avg_dist = np.mean([s['distance_km'] for s in location_stats[:3]])
+            poi_diversity = len(set([p for s in location_stats[:3] for p in s['poi_types']]))
+            
+            spatial_desc = f"Average distance {avg_dist:.2f} km. "
+            if poi_diversity > 1:
+                spatial_desc += f"Diverse area types ({poi_diversity} categories)."
+            else:
+                spatial_desc += "Consistent area type preference."
+        else:
+            spatial_desc = "Insufficient data for spatial pattern analysis."
+        
+        # Temporal patterns
+        has_temporal = any(s['timestamps'] for s in location_stats[:3])
+        if has_temporal:
+            temporal_desc = f"Based on {num_samples} similar {mobility_mode} patterns, movements observed during typical commute and activity hours."
+        else:
+            temporal_desc = "Insufficient temporal data for pattern analysis."
+        
+        return {
+            "next_locations": next_locations,
+            "spatial_patterns": spatial_desc,
+            "temporal_patterns": temporal_desc
+        }
     
     def build_rag_database(
         self,

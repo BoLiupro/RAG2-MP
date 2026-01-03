@@ -373,42 +373,28 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 提交修改后的trainer.py和detailed_trainer.py脚本文件。
 - 提交修改后的config.yaml文件。
 ---
-# Prompt_3.4[框架结构调整：Gravity结果summary，RAG模块prompt优化，DetailedTrainer打印信息调整]
+# Prompt_3.4[框架结构调整：RAG模块prompt优化]
 ## 背景
-现在我觉得Gravity模块的输出结果还可以再利用LLM进行一个总结概括summary，这样可以帮助最终预测模块更好地理解和利用这些候选位置进行预测。此外，我觉得RAG模块中的prompt设计还可以优化一下，确保能够更好地引导LLM生成有用的summary。最后，我觉得detailed_trainer.py脚本中的打印信息还可以调整一下，确保打印的信息更加清晰和有用，现在“Retrieved 5 similar samples (using FAISS):
-  1. Similarity: 0.9911, Next location: 21, Index: 6
-  2. Similarity: 0.9911, Next location: 21, Index: 11
-  3. Similarity: 0.9909, Next location: 21, Index: 8
-  4. Similarity: 0.9908, Next location: 21, Index: 7
-  5. Similarity: 0.9908, Next location: 21, Index: 9
-Warning: LLM synthesis failed: LLM produced reasoning text instead of summary
-Falling back to structured summary...”这一块的信息让我觉得很混乱。已经给出了最后的prompt，应该是LLM回答的时候了，为什么又突然打印了rag的similarity、sample的信息。我觉得rag sample相关的信息打印的太了。
+现在我已经完成了整个mobility prediction模型的训练流程，并且进行了测试。但是在实际运行过程中，我发现LLM的回复总是充满了推理的过程，而不是直接给出我想要的答案。我觉得这是因为prompt对于返回格式设计得不够明确。我希望在RAG模块中，prompt明确指出让LLM用json格式返回rag_summary，这样可以确保LLM的回答更加结构化和易于解析。我希望修改RAG.py脚本中的prompt设计，明确指定LLM的回答格式为json格式。
 
 ## 任务
 请完成以下任务：
-1. **Gravity结果summary实现**：
-   - 修改Gravity.py脚本，添加一个summary生成的功能。
-   - 在summary生成的功能中，接收Gravity Model模块的输出结果，即每个POI类别下的top-n候选位置。
-   - 设计一个合适的prompt，将这些候选位置的信息整合进去，输入到LLM中，得到一个“基于Gravity Model的候选位置总结概括summary”。
-   - 确保修改后的Gravity.py脚本能够正确生成summary，并将其作为输出返回。
-2. **RAG模块prompt优化**：
-   - 修改RAG.py脚本中的prompt设计，确保能够更好地引导LLM生成有用的summary。尽量防止“Warning: LLM synthesis failed: LLM produced reasoning text instead of summary. Falling back to structured summary...”的情况发生。
-3. **DetailedTrainer打印信息调整**：
-   - 修改detailed_trainer.py脚本中的打印信息，确保打印的信息更加清晰和有用。
-
+1. **RAG模块prompt优化**：
+   - 修改RAG.py脚本中的prompt设计，明确指定LLM的回答格式为json格式。
+   - 确保修改后的prompt能够引导LLM生成符合json格式的rag_summary回答。
+   - 在RAG.py脚本中，添加对LLM回答的解析功能，确保能够正确解析json格式的rag_summary回答。
+   - 将解析出来的rag_summary加入到后续的使用流程中，确保能够正确传递和使用。
 
 ## 约束
 - 使用Python编程语言。
-- 使用之前编写的LLM.py脚本中的类和函数。
-- 先专注于框架的搭建，训练流程。
-- 打印信息在detailed_trainer.py脚本中进行。
+- 保持原有脚本的结构和逻辑，尽量只修改必要的部分。
+- 过程中需要有适当的注释和过程打印。
+- 只修改RAG相关，不修改predictor中LLM的prompt设计。
 
 ## 输出格式
-- 提交修改后的Gravity.py脚本文件。
-- 修改后的Gravity.py脚本中，包括Gravity结果summary生成的功能。输入参数包括Gravity Model模块的输出结果，即每个POI类别下的top-n候选位置。
 - 提交修改后的RAG.py脚本文件。
-- 提交修改后的detailed_trainer.py脚本文件。
 ---
+
 
 # 实验设计(后续再完善)
 1. 消融实验：变体一：不用LLM+RAG的信息(w/o RAG)；变体二：不用gravity model输出的信息(w/o Gravity)；变体三：最终不用LLM进行预测（w/o LLM Predictor).

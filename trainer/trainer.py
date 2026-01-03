@@ -660,7 +660,7 @@ def main():
     trainer.initialize_model()
     
     # Train
-    # trainer.train()
+    trainer.train()
     
     # Test
     test_metrics = trainer.test(detailed_log=True)

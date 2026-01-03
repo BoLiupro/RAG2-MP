@@ -192,8 +192,8 @@ class DetailedMobilityTrainer:
         
         if self.print_rag_results:
             self.log(f"\n✅ Retrieved {len(similar_samples)} similar samples")
-            self.log(f"\nTop-3 Similar Samples:")
-            for i, (sim_sample, sim_score) in enumerate(zip(similar_samples[:3], similarities[:3]), 1):
+            self.log(f"\nSimilar Samples:")
+            for i, (sim_sample, sim_score) in enumerate(zip(similar_samples, similarities), 1):
                 self.log(f"\n  Sample {i} (Similarity: {sim_score:.4f}):")
                 # Handle both 'trajectory' and 'observation' keys for compatibility
                 obs = sim_sample.get('trajectory', sim_sample.get('observation', []))
@@ -219,8 +219,8 @@ class DetailedMobilityTrainer:
         
         if self.print_gravity_candidates:
             self.log(f"\n✅ Generated candidates for {len(candidates_by_category)} POI categories")
-            self.log(f"\nTop-5 Categories with Candidates:")
-            for i, (category, candidates) in enumerate(list(candidates_by_category.items())[:5], 1):
+            self.log(f"\nCategories with Candidates:")
+            for i, (category, candidates) in enumerate(list(candidates_by_category.items()), 1):
                 category_display = category.replace('_count', '')
                 self.log(f"\n  {i}. {category_display}:")
                 for j, (grid_id, score) in enumerate(candidates[:3], 1):
@@ -360,7 +360,7 @@ class DetailedMobilityTrainer:
 def main():
     """Main detailed testing script."""
     parser = argparse.ArgumentParser(description='Detailed Mobility Prediction Trainer (Debug Mode)')
-    parser.add_argument('--config', type=str, required=True, help='Path to config.yaml file')
+    parser.add_argument('--config', default="/workspace/China_Journal/config/config.yaml", type=str, required=False, help='Path to config.yaml file')
     args = parser.parse_args()
     
     # Load configuration
