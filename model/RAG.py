@@ -333,13 +333,13 @@ class MobilityRAG:
         context_lines.append(f"Query trajectory ends at Grid {current_loc}")
         context_lines.append(f"\nRetrieved {len(similar_samples)} similar {mobility_mode} patterns:")
         
-        for i, stat in enumerate(location_stats[:5], 1):
+        for i, stat in enumerate(location_stats, 1):
             line = f"\n{i}. Grid {stat['grid_id']}: "
             # line += f"{stat['frequency']} occurrences, "
             # Pass the list of distances to LLM
             dist_str = ", ".join([f"{d:.2f}" for d in stat['distances']])
             line += f"distances [{dist_str}] km, "
-            line += f"similarity {stat['avg_similarity']:.3f}"
+            # line += f"similarity {stat['avg_similarity']:.3f}"
             
             if stat['poi_types']:
                 line += f", area type: {', '.join(stat['poi_types'])}"
@@ -367,6 +367,7 @@ class MobilityRAG:
         
         # New structured synthesis prompt with enhanced JSON format requirement
         synthesis_prompt = f"""Analyze the following mobility patterns and provide a structured summary in JSON format.
+        Do not give summary for each next location, but a total summary for all.
         Keep total response under 100 words.
         These are mobility trajectories that are semantically similar to a query trajectory:
 

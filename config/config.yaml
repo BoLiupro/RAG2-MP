@@ -51,7 +51,7 @@ model:
   # RAG (Retrieval-Augmented Generation) Configuration
   # ---------------------------------------------------------------------------
   rag:
-    top_m_samples: 10  # Number of similar historical samples to retrieve
+    top_m_samples: 5  # Number of similar historical samples to retrieve
     database_path: "/workspace/China_Journal/util/rag_database"  # RAG database directory
     max_summary_length: 256  # Maximum summary length in tokens
     
