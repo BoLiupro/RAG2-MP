@@ -171,16 +171,10 @@ class MobilityLLM:
         # Get mobility mode description
         mobility_mode = get_mobility_mode(city)
         
-        if task == "encoding":
-            # Prompt for trajectory encoding
-            prompt = f"You are analyzing a user's mobility trajectory for {mobility_mode}. "
-            prompt += "Note: trajectories may include both movement and stationary periods (staying at the same location). "
-            prompt += "Please encode the following trajectory into a semantic representation:\n\n"
-        else:
-            # Prompt for summary generation (used in RAG)
-            prompt = f"Based on similar {mobility_mode} mobility patterns, "
-            prompt += "summarize where the user is likely to go next. "
-            prompt += "Note: users may stay at the same location or move to a new one.\n\n"
+        # Prompt for summary generation (used in RAG)
+        prompt = f"Based on similar {mobility_mode} mobility patterns, "
+        prompt += "summarize where the user is likely to go next. "
+        prompt += "Note: users may stay at the same location or move to a new one.\n\n"
         
         # Add trajectory information
         prompt += "Trajectory:\n"

@@ -128,7 +128,14 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 提交修改后的mobility_processing.py脚本。
 - 重新运行修改后的脚本，生成处理后的所有城市出行轨迹数据csv文件，包括train.csv, val.csv, test.csv。文件全部保存在data/{city}目录下。
 ---
+# Prompt_1.5[RAG数据库user与训练user区分]
+## 背景
+现在我在构建RAG经验池数据库的过程中，发现有一个问题需要解决。我希望在构建RAG数据库时和训练时使用的数据来自于不同的用户。也就是说，RAG数据库中的样本应该来自于一部分用户，而训练模型时使用的样本应该来自于另一部分用户。这样可以避免数据泄露和过拟合问题，提升模型的泛化能力。我需要修改build_rag_database.py脚本和trainer.py脚本，确保RAG数据库和训练数据使用不同的用户数据。
 
+# 任务
+请完成以下任务：
+
+---
 # 代码框架
 ---
 我这个项目解决的问题是human mobility prediction,即根据user历史轨迹来预测下一步出现的位置。数学公式定义是：input包括user的历史轨迹S={s_1,s_2,...,s_i},每个s_i=(li,ti)，表示在时间ti出现在grid li (li是spatial identifier)位置上。output是下一个时间点t_(i+1)出现的位置l_(i+1)。我的method主要是将LLM和改进版的garvity model结合起来进行预测。主要包含三个module：
@@ -285,11 +292,6 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 的回答过于发散和格式过于混乱。
 2、RAG_suammary的长度可能需要控制，避免出现过长summry然后被截断的情况。我觉得可以设置一个最大长度的限制。
 ---
-# Prompt_2.7[Gravity模块Bug修改]
-## 背景
-现在我在测试Gravity模块的过程中，发现有一些bug需要修改：
-1、在
-
 
 
 # 训练流程 
@@ -407,7 +409,7 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
    - 测试修改后的trainer.py脚本，确保LLM输出的Rag_summary是正确的。
    - 底线是根据detailed_trainer.py脚本中的调用方式，调整trainer.py脚本中的调用方式，使其保持一致。
 ---
-# Prompt_3.6[最终预测头和ComputeLoss函数修改]
+# Prompt_3.6.1[最终预测头和ComputeLoss函数修改]
 ## 背景
 现在我已经完成了整个mobility prediction模型的训练流程，并且进行了测试。但是在实际运行过程中，我发现最终预测头和ComputeLoss函数需要进行一些修改和完善：
 1、最终预测头现在是直接利用LLM的生成输出作为预测结果。我觉得这样可能不够准确和稳定。我希望能够在最终预测头中，添加一个简单的分类器，对LLM的生成输出进行进一步处理和优化，从而提升预测的准确性。
@@ -431,7 +433,45 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 ## 输出格式
 - 提交修改后的MobilityPredictor.py和trainer.py脚本文件。
 ---
-# Prompt
-# 实验设计(后续再完善)
-1. 消融实验：变体一：不用LLM+RAG的信息(w/o RAG)；变体二：不用gravity model输出的信息(w/o Gravity)；变体三：最终不用LLM进行预测（w/o LLM Predictor).
-2. 前期准备：6.1：RAG module的经验池准备：对训练集中的所有samples进行LLM编码，得到embedding，存储下来，作为经验池；6.2:拟合gravity model的参数，选择最优的weight参数和radius参数作为实验的默认值。
+# Prompt_3.6.2[最终预测头和ComputeLoss函数修改V2]
+## 背景
+我之前修改了MobilityPredictor.py和trainer.py脚本，添加了一个分类器作为最终预测头，并修改了ComputeLoss函数来使用分类头的输出结果作为最终的预测结果。但是我现在还是想修改为不要分类头、LLM直接输出的方式。我觉得这样可以更好地利用LLM的强大生成能力，提升预测的准确性。
+
+## 任务
+
+# Rag库建立
+我目前的想法是;
+1、读取train.csv。
+2、设计一个prompt，“This is a daily mobility trajectory.Summarize its mobility pattern in terms of purpose, temporal rhythm, and functional transitions.”，将train.csv中的每个样本的历史轨迹数据输入到LLM中，生成embedding表示。
+3、将membedding归一化、PCA降维、HDBSCAN聚类，得到高频通勤簇和低频但结构鲜明的特殊出行簇，一共分为1k个类。注意这个归一化的操作仅仅是用于聚类，后续的存储rag库和相似度计算仍然使用原始embedding。
+4、根据聚类的结果每个类别选择一些代表样本，组成最终的rag_database，保存到/workspace/China_Journal/util/rag_database路径下。选择的类别包括中心原型、边缘样本、context或时间极端样本。每个类别选择10个样本（不够就不需要10个），最终组成1k*10=10k个样本的rag_database。
+5、要加一个“功能性覆盖约束”，使得rag_database能够有较好的起点功能覆盖、时间段覆盖、空间覆盖和跨区距离等级覆盖。（尽量，不是必须）
+
+# Prompt_4.1[RAG经验池数据库构建脚本实现]
+## 背景
+现在我需要建立RAG的经验池数据库，用于后续的相似度搜索和summary生成。这个数据库需要包含处理好的训练集数据的embedding表示，存储在/workspace/China_Journal/util/rag_database路径下。我需要一个Python脚本来实现这个功能。具体来说用如下的步骤：
+1、读取train.csv。
+2、设计一个prompt，“This is a daily mobility trajectory.Summarize its mobility pattern in terms of purpose, temporal rhythm, and functional transitions.”，将train.csv中的每个样本的历史轨迹数据输入到LLM中，生成embedding表示。
+3、将membedding归一化、PCA降维、HDBSCAN聚类，得到高频通勤簇和低频但结构鲜明的特殊出行簇，一共分为1k个类。注意这个归一化的操作仅仅是用于聚类，后续的存储rag库和相似度计算仍然使用原始embedding。
+4、根据聚类的结果每个类别选择一些代表样本，组成最终的rag_database，保存到/workspace/China_Journal/util/rag_database路径下。选择的类别包括中心原型、边缘样本、context或时间极端样本。每个类别选择10个样本（不够就不需要10个），最终组成1k*10=10k个样本的rag_database。
+5、要加一个“功能性覆盖约束”，使得rag_database能够有较好的起点功能覆盖、时间段覆盖、空间覆盖和跨区距离等级覆盖。（尽量，不是必须）
+
+## 任务
+请完成以下任务：
+1. **RAG数据库构建脚本实现**：
+   - 编写/workspace/China_Journal/util/build_rag_database.py脚本，实现RAG经验池数据库的构建功能。
+   - 脚本需要按照上述步骤实现，包括读取train.csv、生成embedding表示、归一化和聚类、选择代表样本、保存rag_database等部分。
+2. **功能性覆盖约束实现**：
+   - 在选择代表样本的过程中，尽量考虑功能性覆盖约束，确保rag_database能够有较好的起点功能覆盖、时间段覆盖、空间覆盖和跨区距离等级覆盖。
+
+## 约束
+- 使用Python编程语言。
+- 使用之前编写的LLM.py脚本中的类和函数。
+- 保持原有脚本的结构和逻辑，尽量只修改必要的部分。
+- 过程中需要有适当的注释和过程打印。
+- 输出的rag_database格式要与RAG.py脚本中的读取方式保持一致，确保能够正确加载和使用。
+## 输出格式
+- 提交build_rag_database.py脚本文件。
+- 脚本中，包括RAG经验池数据库的构建功能和功能性覆盖约束的实现。
+---
+

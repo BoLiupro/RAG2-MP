@@ -1,5 +1,4 @@
 raw_data/
-data
-raw_data/
 data/
 *.pkl
+util/rag_database
