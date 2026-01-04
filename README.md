@@ -460,7 +460,6 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 3、将membedding归一化、PCA降维、HDBSCAN聚类，得到高频通勤簇和低频但结构鲜明的特殊出行簇，一共分为1k个类。注意这个归一化的操作仅仅是用于聚类，后续的存储rag库和相似度计算仍然使用原始embedding。
 4、根据聚类的结果每个类别选择一些代表样本，组成最终的rag_database，保存到/workspace/China_Journal/util/rag_database路径下。选择的类别包括中心原型、边缘样本、context或时间极端样本。每个类别选择10个样本（不够就不需要10个），最终组成1k*10=10k个样本的rag_database。
 5、要加一个“功能性覆盖约束”，使得rag_database能够有较好的起点功能覆盖、时间段覆盖、空间覆盖和跨区距离等级覆盖。（尽量，不是必须）
-
 # Prompt_4.1[RAG经验池数据库构建脚本实现]
 ## 背景
 现在我需要建立RAG的经验池数据库，用于后续的相似度搜索和summary生成。这个数据库需要包含处理好的训练集数据的embedding表示，存储在/workspace/China_Journal/util/rag_database路径下。我需要一个Python脚本来实现这个功能。具体来说用如下的步骤：
@@ -488,8 +487,69 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 提交build_rag_database.py脚本文件。
 - 脚本中，包括RAG经验池数据库的构建功能和功能性覆盖约束的实现。
 ---
-# Prompt_4.2[RAG数据库user与训练user区分]
+
+# 系统模型优化
+# Prompt_5.1[系统模型优化-Prompt优化]
 ## 背景
-现在我在构建RAG经验池数据库的过程中，发现有一个问题需要解决。我希望在构建RAG数据库时和训练时使用的数据来自于不同的用户。也就是说，RAG数据库中的样本应该来自于一部分用户，而训练模型时使用的样本应该来自于另一部分用户。这样可以避免数据泄露和过拟合问题，提升模型的泛化能力。
-# 任务
+现在我已经完成了整个mobility prediction模型的训练流程，并且进行了测试。但是在实际运行过程中，我觉得prompt还可以进行一些优化和改进，以提升模型的性能和预测的准确性。修改之后我想先用detailed_trainer.py脚本进行测试，确保修改后的prompt能够提升RAG_summary的质量。
+## 任务
 请完成以下任务：
+1. **RAG模块prompt优化**：
+   - RAG.py脚本中的_generate_structured_summary函数中，利用了dist，但是计算的是当前位置和similar sample中最后一个位置的距离。我觉得这样可能不够准确。我希望改为计算当前位置和similar sample中倒数第二个位置的距离。因为similar sample的最后一个位置是下一个位置，和当前轨迹没有空间关系，计算距离没有意义。我希望通过similar sample中倒数第二个位置和当前轨迹的距离，来反映空间关系，为现在下一步预测提供更有用的信息。
+   - 使用如下的prompt设计：
+   ```synthesis_prompt = f"""
+You are given a set of retrieved mobility trajectories that are semantically similar to a query trajectory.
+These trajectories serve as supporting evidence and may be noisy or incomplete.
+
+Your task is to summarize ONLY the patterns that are consistently observed across the retrieved samples.
+Do NOT introduce external knowledge, assumptions, or speculation beyond the given data.
+
+{context}
+
+You must respond with ONLY a valid JSON object in the following exact format.
+Do not include explanations, markdown, or any text outside the JSON.
+
+{{
+  "next_locations": [
+    {{
+      "grid_id": <grid_id>,
+      "frequency": <integer count in retrieved samples>,
+      "avg_distance_km": <average distance from previous location>,
+      "area_type": "<dominant POI categories or 'N/A'>",
+      "evidence_basis": "<which observed factors support this candidate, e.g. time similarity, POI transition, distance range>"
+    }}
+  ],
+  "spatial_patterns": {{
+    "distance_range_km": "<typical min–max distance or 'inconsistent'>",
+    "movement_type": "<short-range | medium-range | long-range | mixed>"
+  }},
+  "temporal_patterns": {{
+    "dominant_time_windows": "<e.g. morning_peak, evening, mixed, or 'none'>",
+    "temporal_consistency": "<high | medium | low>"
+  }},
+  "pattern_confidence": "<high | medium | low>"
+}}
+
+Rules:
+- Include only the top 3–5 next locations by frequency.
+- All fields must be derived from the retrieved samples.
+- If no clear pattern exists, explicitly state 'inconsistent' or 'none'.
+- Keep the total response concise and factual.
+"""
+   - 确保修改后的prompt能够引导LLM生成符合json格式的rag_summary回答。
+2. **修改detailed_trainer.py**
+   - 修改detailed_trainer.py脚本中的RAG模块调用部分，使用上述新的prompt设计。
+   - 确保修改后的detailed_trainer.py脚本能够正确调用RAG模块，并生成符合新prompt要求的rag_summary回答。
+
+## 约束
+- 使用Python编程语言。
+- 保持原有脚本的结构和逻辑，尽量只修改必要的部分。
+- 过程中需要有适当的注释和过程打印。
+- 只修改RAG相关，不修改predictor中LLM的prompt设计。
+## 输出格式
+- 提交修改后的RAG.py和detailed_trainer.py脚本文件。
+- RAG.py脚本中，包括RAG模块prompt优化的实现。
+- detailed_trainer.py脚本中，包括RAG模块调用部分的修改。
+---
+
+

@@ -211,8 +211,16 @@ class MobilityTrainer:
                 return_scores=True
             )
         
-        # Model should stay in eval mode for forward pass (no trainable params in this case)
-        self.predictor.llm.model.eval()
+        # Switch back to train mode for LoRA forward pass if LoRA is enabled
+        use_lora = self.config['model'].get('llm', {}).get('use_lora', False) or \
+                   self.config['model'].get('use_lora', False)
+        
+        if use_lora:
+            # LoRA is enabled: use train mode to allow gradient computation
+            self.predictor.llm.model.train()
+        else:
+            # No trainable params: keep eval mode for consistency
+            self.predictor.llm.model.eval()
         
         # Build prompt for final prediction
         prompt = self.predictor._build_prediction_prompt(

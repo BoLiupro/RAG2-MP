@@ -1,0 +1,10 @@
+[2026-01-05 01:51:19] Loading datasets...
+[2026-01-05 01:51:21] Train samples: 10
+[2026-01-05 01:51:21] Validation samples: 10
+[2026-01-05 01:51:21] Test samples: 10
+[2026-01-05 01:51:21] 
+Initializing MobilityPredictor model...
+[2026-01-05 01:51:21]   LLM Model: Deepseek-R1-Distill-Qwen-3B
+[2026-01-05 01:51:21]   RAG Top-M Samples: 5
+[2026-01-05 01:51:21]   Gravity Top-N Candidates: 5
+[2026-01-05 01:51:21]   Prediction Top-K: 10

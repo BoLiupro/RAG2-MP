@@ -453,7 +453,7 @@ class MobilityPredictor:
         prompt += formatted_traj + "\n"
         
         # Add RAG summary
-        prompt += f"\n## Similar Historical Patterns:\n"
+        prompt += f"\n## Next location of similar mobility trajectories:\n"
         prompt += f"{rag_summary}\n"
         
         # Add gravity model candidates by category with distances

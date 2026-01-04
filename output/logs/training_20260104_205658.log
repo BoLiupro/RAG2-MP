@@ -1,0 +1,21 @@
+[2026-01-04 20:56:58] Loading datasets...
+[2026-01-04 20:57:01] Train samples: 1000
+[2026-01-04 20:57:01] Validation samples: 200
+[2026-01-04 20:57:01] Test samples: 200
+[2026-01-04 20:57:01] Initializing MobilityPredictor model...
+[2026-01-04 20:57:01]   LLM Model: Deepseek-R1-Distill-Qwen-3B
+[2026-01-04 20:57:01]   RAG Top-M Samples: 5
+[2026-01-04 20:57:01]   Gravity Top-N Candidates: 5
+[2026-01-04 20:57:01]   Prediction Top-K: 10
+[2026-01-04 20:57:12] LoRA enabled: 0 trainable LLM params
+[2026-01-04 20:57:12] WARNING: LoRA enabled but no LoRA parameters found. Model will be fully frozen.
+[2026-01-04 20:57:12] Model initialized successfully
+[2026-01-04 20:57:12] 
+======================================================================
+[2026-01-04 20:57:12] STARTING TRAINING
+[2026-01-04 20:57:12] ======================================================================
+[2026-01-04 20:57:12] 
+Epoch 1/3
+[2026-01-04 20:57:12] ----------------------------------------------------------------------
+[2026-01-04 20:59:27]   Ground truth: Grid 21, Predicted: Grid 20
+[2026-01-04 20:59:27] Epoch 1 | Step 10/500 | Batch Loss: 1.1475 | Running Avg Loss: 4.6433

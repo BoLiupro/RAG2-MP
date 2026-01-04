@@ -101,7 +101,8 @@ class MobilityLLM:
         max_new_tokens: int = 512,
         temperature: float = 0.7,
         do_sample: bool = True,
-        top_p: float = 0.9
+        top_p: float = 0.9,
+        stop_strings: List[str] = None
     ) -> str:
         """
         Generate text based on a prompt.
@@ -112,10 +113,17 @@ class MobilityLLM:
             temperature: Sampling temperature
             do_sample: Whether to use sampling
             top_p: Nucleus sampling parameter
+            stop_strings: List of strings to stop generation (e.g., ['<think>', '\n\n'])
         
         Returns:
             Generated text (excluding the prompt)
         """
+        # For DeepSeek-R1 models, add system message to suppress thinking
+        if 'deepseek' in self.model_name.lower() or 'r1' in self.model_name.lower():
+            # Prepend instruction to avoid reasoning tags
+            if '<think>' not in prompt and 'Do NOT include' not in prompt:
+                prompt = "Answer directly without showing your reasoning process. " + prompt
+        
         # Tokenize
         inputs = self.tokenizer(
             prompt,
@@ -147,6 +155,12 @@ class MobilityLLM:
         else:
             result = generated_text.strip()
         
+        # Apply stop strings if provided
+        if stop_strings:
+            for stop_str in stop_strings:
+                if stop_str in result:
+                    result = result.split(stop_str)[0].strip()
+        
         return result
     
     def _build_trajectory_prompt(
@@ -173,8 +187,7 @@ class MobilityLLM:
         
         # Prompt for summary generation (used in RAG)
         prompt = f"Based on similar {mobility_mode} mobility patterns, "
-        prompt += "summarize where the user is likely to go next. "
-        prompt += "Note: users may stay at the same location or move to a new one.\n\n"
+        prompt += "Summarize its mobility pattern in terms of purpose, temporal rhythm, and functional transitions.\n\n"
         
         # Add trajectory information
         prompt += "Trajectory:\n"

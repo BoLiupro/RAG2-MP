@@ -282,8 +282,26 @@ class MobilityRAG:
             avg_sim = np.mean([sim for _, sim in samples_list])
             frequency = len(samples_list)
             
-            # Calculate distance
-            dist = calculate_grid_distance(current_loc, loc, city=self.city)
+            # Calculate distance from current location to the second-to-last position in similar samples
+            # (not the last position which is the next_location)
+            distances = []
+            for sample, _ in samples_list:
+                traj = sample.get('trajectory', [])
+                # Use second-to-last location (index -2) if available
+                if len(traj) >= 2:
+                    prev_loc = traj[-2].get('location_id')
+                    if prev_loc is not None:
+                        dist = calculate_grid_distance(current_loc, prev_loc, city=self.city)
+                        distances.append(dist)
+                elif len(traj) >= 1:
+                    # Fallback to last location if trajectory only has 1 step
+                    prev_loc = traj[-1].get('location_id')
+                    if prev_loc is not None:
+                        dist = calculate_grid_distance(current_loc, prev_loc, city=self.city)
+                        distances.append(dist)
+            
+            # Use average distance from previous locations
+            avg_dist = np.mean(distances) if distances else 0.0
             
             # Get POI info
             poi_types = []
@@ -305,7 +323,7 @@ class MobilityRAG:
                 'grid_id': loc,
                 'frequency': frequency,
                 'avg_similarity': avg_sim,
-                'distance_km': dist,
+                'distance_km': avg_dist,
                 'poi_types': poi_types,
                 'timestamps': timestamps
             })
@@ -351,8 +369,10 @@ class MobilityRAG:
         
         context = "\n".join(context_lines)
         
-        # Structured synthesis prompt with JSON format requirement
+        # New structured synthesis prompt with enhanced JSON format requirement
         synthesis_prompt = f"""Analyze the following mobility patterns and provide a structured summary in JSON format.
+        Keep total response under 200 words.
+        These are mobility trajectories that are semantically similar to a query trajectory:
 
 {context}
 
@@ -361,18 +381,14 @@ You must respond with ONLY a valid JSON object in this exact format (no addition
 {{
   "next_locations": [
     {{
-      "grid_id": <grid_id>,
-      "frequency": <number>,
-      "distance_km": <number>,
-      "area_type": "<poi_types or 'N/A'>",
-      "reason": "<concise reason why this location is likely>"
+      "avg_distance_from_previous_location_km": <number>,
+      "area_type_of_next_location": "<3 top dominant POI categories or 'N/A'>",
+      "reason": "<which observed factors support this candidate, e.g. time similarity, POI transition, distance range>"
     }}
   ],
   "spatial_patterns": "<describe distance trends and area characteristics in 1-2 sentences>",
   "temporal_patterns": "<describe time patterns in 1-2 sentences, or 'No clear temporal pattern'>"
-}}
-
-Include top 3-5 next locations. Keep total response under 200 words."""
+}}"""
         
         if print_prompt:
             print(f"\n{'='*70}")
@@ -403,8 +419,8 @@ Include top 3-5 next locations. Keep total response under 200 words."""
             # Parse JSON response
             summary_json = self._parse_json_response(llm_response)
             
-            # Convert JSON to formatted text for downstream use
-            summary = self._format_json_to_text(summary_json)
+            # Use JSON string directly as summary (skip text formatting)
+            summary = json.dumps(summary_json, indent=2, ensure_ascii=False)
             
         except Exception as e:
             print(f"Warning: LLM synthesis or JSON parsing failed: {e}")
@@ -412,11 +428,11 @@ Include top 3-5 next locations. Keep total response under 200 words."""
             
             # Fallback: create JSON structure directly from data
             summary_json = self._create_fallback_json(location_stats, mobility_mode, len(similar_samples))
-            summary = self._format_json_to_text(summary_json)
+            summary = json.dumps(summary_json, indent=2, ensure_ascii=False)
         
         if print_prompt:
             print(f"\n{'='*70}")
-            print("GENERATED SUMMARY (TEXT FORMAT):")
+            print("GENERATED SUMMARY (JSON FORMAT):")
             print(f"{'='*70}")
             print(summary)
             print(f"{'='*70}\n")
@@ -426,7 +442,7 @@ Include top 3-5 next locations. Keep total response under 200 words."""
     def _parse_json_response(self, llm_response: str) -> Dict[str, Any]:
         """
         Parse JSON response from LLM output.
-        Handles various formats including markdown code blocks.
+        Handles various formats including markdown code blocks and reasoning tags.
         
         Args:
             llm_response: Raw response from LLM
@@ -434,23 +450,44 @@ Include top 3-5 next locations. Keep total response under 200 words."""
         Returns:
             Parsed JSON dictionary
         """
-        # Remove markdown code blocks if present
+        original_response = llm_response
+        
+        # Step 1: Remove Deepseek-R1 thinking tags if present
+        if '</think>' in llm_response:
+            # If we have a closing tag, everything before it is likely reasoning or echoed prompt
+            # We should take everything AFTER the last </think> tag
+            llm_response = llm_response.split('</think>')[-1]
+        elif '<think>' in llm_response:
+            # If there's an opening tag but no closing tag, try to remove the tag itself
+            llm_response = llm_response.replace('<think>', '')
+        
+        # Step 2: Remove markdown code blocks if present
         llm_response = re.sub(r'```json\s*', '', llm_response)
         llm_response = re.sub(r'```\s*', '', llm_response)
         
-        # Remove any leading/trailing whitespace
+        # Step 3: Remove any leading/trailing whitespace
         llm_response = llm_response.strip()
         
-        # Try to find JSON object in the response
+        # Step 4: Try to extract JSON object from the response
         # Look for content between first { and last }
         start_idx = llm_response.find('{')
         end_idx = llm_response.rfind('}')
         
         if start_idx == -1 or end_idx == -1:
-            raise ValueError("No JSON object found in LLM response")
+            # Try to find JSON after common prefixes
+            for prefix in ['Here is the JSON:', 'JSON:', 'Output:', 'Result:']:
+                if prefix in llm_response:
+                    llm_response = llm_response.split(prefix)[-1].strip()
+                    start_idx = llm_response.find('{')
+                    end_idx = llm_response.rfind('}')
+                    if start_idx != -1 and end_idx != -1:
+                        break
+        
+        if start_idx == -1 or end_idx == -1:
+            raise ValueError(f"No JSON object found in LLM response. Response: {original_response[:200]}...")
         
         json_str = llm_response[start_idx:end_idx + 1]
-        
+                
         try:
             summary_json = json.loads(json_str)
         except json.JSONDecodeError as e:
@@ -462,11 +499,14 @@ Include top 3-5 next locations. Keep total response under 200 words."""
             except:
                 raise ValueError(f"Failed to parse JSON: {e}")
         
-        # Validate required fields
+        # Step 6: Validate required fields (updated for new format)
         required_fields = ['next_locations', 'spatial_patterns', 'temporal_patterns']
         for field in required_fields:
             if field not in summary_json:
-                raise ValueError(f"Missing required field: {field}")
+                # Check if it's a typo or optional
+                if field == 'pattern_confidence':
+                    continue
+                raise ValueError(f"Missing required field: {field}. Available fields: {list(summary_json.keys())}")
         
         return summary_json
     
@@ -492,30 +532,45 @@ Include top 3-5 next locations. Keep total response under 200 words."""
             freq_raw = loc.get('frequency', 0)
             freq = int(freq_raw) if isinstance(freq_raw, (int, float)) else (int(freq_raw) if str(freq_raw).isdigit() else 0)
             
-            dist_raw = loc.get('distance_km', 0)
+            # Use avg_distance_km from new format
+            dist_raw = loc.get('avg_distance_km', loc.get('distance_km', 0))
             try:
                 dist = float(dist_raw) if isinstance(dist_raw, (int, float, str)) else 0
             except (ValueError, TypeError):
                 dist = 0.0
             
             area = loc.get('area_type', 'N/A')
-            reason = loc.get('reason', 'Similar pattern match')
+            evidence = loc.get('evidence_basis', loc.get('reason', 'Similar pattern match'))
             
             line = f"- Grid {grid_id}: {freq} patterns, {dist:.2f} km"
             if area and area != 'N/A':
                 line += f", {area}"
-            line += f"\n  Reason: {reason}"
+            line += f"\n  Evidence: {evidence}"
             summary_lines.append(line)
         
-        # Spatial patterns section
-        spatial = summary_json.get('spatial_patterns', 'No spatial pattern information')
+        # Spatial patterns section (handle both dict and string formats)
+        spatial = summary_json.get('spatial_patterns', {})
         summary_lines.append(f"\n**Spatial Patterns:**")
-        summary_lines.append(spatial)
+        if isinstance(spatial, dict):
+            distance_range = spatial.get('distance_range_km', 'N/A')
+            movement_type = spatial.get('movement_type', 'N/A')
+            summary_lines.append(f"Distance range: {distance_range}, Movement type: {movement_type}")
+        else:
+            summary_lines.append(str(spatial))
         
-        # Temporal patterns section
-        temporal = summary_json.get('temporal_patterns', 'No temporal pattern information')
+        # Temporal patterns section (handle both dict and string formats)
+        temporal = summary_json.get('temporal_patterns', {})
         summary_lines.append(f"\n**Temporal Patterns:**")
-        summary_lines.append(temporal)
+        if isinstance(temporal, dict):
+            time_windows = temporal.get('dominant_time_windows', 'N/A')
+            consistency = temporal.get('temporal_consistency', 'N/A')
+            summary_lines.append(f"Time windows: {time_windows}, Consistency: {consistency}")
+        else:
+            summary_lines.append(str(temporal))
+        
+        # Pattern confidence
+        confidence = summary_json.get('pattern_confidence', 'N/A')
+        summary_lines.append(f"\n**Pattern Confidence:** {confidence}")
         
         return "\n".join(summary_lines)
     
@@ -526,7 +581,7 @@ Include top 3-5 next locations. Keep total response under 200 words."""
         num_samples: int
     ) -> Dict[str, Any]:
         """
-        Create fallback JSON structure when LLM fails.
+        Create fallback JSON structure when LLM fails (updated for new format).
         
         Args:
             location_stats: Location statistics
@@ -539,51 +594,78 @@ Include top 3-5 next locations. Keep total response under 200 words."""
         # Build next locations list
         next_locations = []
         for i, stat in enumerate(location_stats[:5], 1):
-            reason_parts = []
+            evidence_parts = []
             if stat['frequency'] > 1:
-                reason_parts.append(f"{stat['frequency']} historical visits")
+                evidence_parts.append(f"{stat['frequency']} historical visits")
             if stat['distance_km'] < 2:
-                reason_parts.append("close proximity")
+                evidence_parts.append("close proximity")
             elif stat['distance_km'] > 10:
-                reason_parts.append("long-distance movement")
+                evidence_parts.append("long-distance movement")
             if stat['poi_types']:
-                reason_parts.append(f"{stat['poi_types'][0]} area")
+                evidence_parts.append(f"{stat['poi_types'][0]} area")
             
-            reason = ", ".join(reason_parts) if reason_parts else "similar pattern match"
+            evidence = ", ".join(evidence_parts) if evidence_parts else "similar pattern match"
             area_type = ", ".join(stat['poi_types']) if stat['poi_types'] else "N/A"
             
             next_locations.append({
                 "grid_id": stat['grid_id'],
                 "frequency": stat['frequency'],
-                "distance_km": round(stat['distance_km'], 2),
+                "avg_distance_km": round(stat['distance_km'], 2),
                 "area_type": area_type,
-                "reason": reason
+                "evidence_basis": evidence
             })
         
-        # Spatial patterns
+        # Spatial patterns (structured format)
         if location_stats:
-            avg_dist = np.mean([s['distance_km'] for s in location_stats[:3]])
-            poi_diversity = len(set([p for s in location_stats[:3] for p in s['poi_types']]))
+            distances = [s['distance_km'] for s in location_stats[:5]]
+            min_dist = min(distances)
+            max_dist = max(distances)
+            avg_dist = np.mean(distances)
             
-            spatial_desc = f"Average distance {avg_dist:.2f} km. "
-            if poi_diversity > 1:
-                spatial_desc += f"Diverse area types ({poi_diversity} categories)."
+            # Determine movement type
+            if avg_dist < 2:
+                movement_type = "short-range"
+            elif avg_dist < 10:
+                movement_type = "medium-range"
             else:
-                spatial_desc += "Consistent area type preference."
+                movement_type = "long-range"
+            
+            spatial_patterns = {
+                "distance_range_km": f"{min_dist:.2f}–{max_dist:.2f} km",
+                "movement_type": movement_type
+            }
         else:
-            spatial_desc = "Insufficient data for spatial pattern analysis."
+            spatial_patterns = {
+                "distance_range_km": "inconsistent",
+                "movement_type": "mixed"
+            }
         
-        # Temporal patterns
+        # Temporal patterns (structured format)
         has_temporal = any(s['timestamps'] for s in location_stats[:3])
         if has_temporal:
-            temporal_desc = f"Based on {num_samples} similar {mobility_mode} patterns, movements observed during typical commute and activity hours."
+            temporal_patterns = {
+                "dominant_time_windows": "mixed",
+                "temporal_consistency": "medium"
+            }
         else:
-            temporal_desc = "Insufficient temporal data for pattern analysis."
+            temporal_patterns = {
+                "dominant_time_windows": "none",
+                "temporal_consistency": "low"
+            }
+        
+        # Pattern confidence
+        if len(location_stats) >= 3 and location_stats[0]['frequency'] > 2:
+            confidence = "high"
+        elif len(location_stats) >= 2:
+            confidence = "medium"
+        else:
+            confidence = "low"
         
         return {
             "next_locations": next_locations,
-            "spatial_patterns": spatial_desc,
-            "temporal_patterns": temporal_desc
+            "spatial_patterns": spatial_patterns,
+            "temporal_patterns": temporal_patterns,
+            "pattern_confidence": confidence
         }
     
     def build_rag_database(
