@@ -287,18 +287,11 @@ class MobilityRAG:
             distances = []
             for sample, _ in samples_list:
                 traj = sample.get('trajectory', [])
-                # Use second-to-last location (index -2) if available
                 if len(traj) >= 2:
                     prev_loc = traj[-2].get('location_id')
-                    if prev_loc is not None:
-                        dist = calculate_grid_distance(current_loc, prev_loc, city=self.city)
-                        distances.append(dist)
-                elif len(traj) >= 1:
-                    # Fallback to last location if trajectory only has 1 step
-                    prev_loc = traj[-1].get('location_id')
-                    if prev_loc is not None:
-                        dist = calculate_grid_distance(current_loc, prev_loc, city=self.city)
-                        distances.append(dist)
+                    curr_loc = traj[-1].get('location_id')
+                    dist = calculate_grid_distance(curr_loc, prev_loc, city=self.city)
+                    distances.append(dist)
             
             # Use average distance from previous locations
             avg_dist = np.mean(distances) if distances else 0.0
@@ -324,6 +317,7 @@ class MobilityRAG:
                 'frequency': frequency,
                 'avg_similarity': avg_sim,
                 'distance_km': avg_dist,
+                'distances': distances,
                 'poi_types': poi_types,
                 'timestamps': timestamps
             })
@@ -341,8 +335,10 @@ class MobilityRAG:
         
         for i, stat in enumerate(location_stats[:5], 1):
             line = f"\n{i}. Grid {stat['grid_id']}: "
-            line += f"{stat['frequency']} occurrences, "
-            line += f"distance {stat['distance_km']:.2f} km, "
+            # line += f"{stat['frequency']} occurrences, "
+            # Pass the list of distances to LLM
+            dist_str = ", ".join([f"{d:.2f}" for d in stat['distances']])
+            line += f"distances [{dist_str}] km, "
             line += f"similarity {stat['avg_similarity']:.3f}"
             
             if stat['poi_types']:
@@ -371,7 +367,7 @@ class MobilityRAG:
         
         # New structured synthesis prompt with enhanced JSON format requirement
         synthesis_prompt = f"""Analyze the following mobility patterns and provide a structured summary in JSON format.
-        Keep total response under 200 words.
+        Keep total response under 100 words.
         These are mobility trajectories that are semantically similar to a query trajectory:
 
 {context}
@@ -379,14 +375,9 @@ class MobilityRAG:
 You must respond with ONLY a valid JSON object in this exact format (no additional text, explanations, or markdown):
 
 {{
-  "next_locations": [
-    {{
-      "avg_distance_from_previous_location_km": <number>,
-      "area_type_of_next_location": "<3 top dominant POI categories or 'N/A'>",
-      "reason": "<which observed factors support this candidate, e.g. time similarity, POI transition, distance range>"
-    }}
-  ],
-  "spatial_patterns": "<describe distance trends and area characteristics in 1-2 sentences>",
+  "avg_distance_from_previous_location_km": <number>,
+  "area_type_of_next_location": "<describe poi transitions or poi categories in 2-3 sentences>",
+  "spatial_patterns": "<describe distance trends and area characteristics in 2-3 sentences>",
   "temporal_patterns": "<describe time patterns in 1-2 sentences, or 'No clear temporal pattern'>"
 }}"""
         
@@ -500,7 +491,7 @@ You must respond with ONLY a valid JSON object in this exact format (no addition
                 raise ValueError(f"Failed to parse JSON: {e}")
         
         # Step 6: Validate required fields (updated for new format)
-        required_fields = ['next_locations', 'spatial_patterns', 'temporal_patterns']
+        required_fields = ['avg_distance_from_previous_location_km','area_type_of_next_location', 'spatial_patterns', 'temporal_patterns']
         for field in required_fields:
             if field not in summary_json:
                 # Check if it's a typo or optional

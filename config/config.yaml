@@ -51,7 +51,7 @@ model:
   # RAG (Retrieval-Augmented Generation) Configuration
   # ---------------------------------------------------------------------------
   rag:
-    top_m_samples: 5  # Number of similar historical samples to retrieve
+    top_m_samples: 10  # Number of similar historical samples to retrieve
     database_path: "/workspace/China_Journal/util/rag_database"  # RAG database directory
     max_summary_length: 256  # Maximum summary length in tokens
     
@@ -63,7 +63,7 @@ model:
   # Gravity Model Configuration
   # ---------------------------------------------------------------------------
   gravity:
-    top_n_candidates: 5  # Number of top candidates per POI category
+    top_n_candidates: 3  # Number of top candidates per POI category
     weight: 1.0  # Weight parameter in gravity formula: score = weight * POI_count / distance^2
     radius: 5  # Search radius in grid units
     grid_size: 40  # Grid system size (40x40 = 1600 grids)
@@ -73,7 +73,7 @@ model:
   # Prediction Configuration
   # ---------------------------------------------------------------------------
   prediction:
-    top_k_predictions: 10  # Number of top location predictions to return
+    top_k_predictions: 5  # Number of top location predictions to return
 
 # ============================================================================
 # Training Configuration

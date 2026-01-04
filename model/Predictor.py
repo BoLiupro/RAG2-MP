@@ -109,7 +109,7 @@ class MobilityPredictor:
         ground_truth: int = None,
         print_prompt: bool = None,
         use_beam_search: bool = False
-    ) -> Tuple[List[Tuple[int, float]], Dict[str, Any]]:
+    ) -> Tuple[List[Tuple[int, float]], torch.Tensor, List[int]]:
         """
         Make mobility prediction for the next location using LLM generation.
         
@@ -122,7 +122,8 @@ class MobilityPredictor:
         Returns:
             Tuple of:
                 - List of (location_id, confidence) tuples for top-K predictions
-                - Dictionary with intermediate results (summary, candidates, etc.)
+                - Logits tensor (or None for generation-based approach)
+                - List of candidate grid IDs
         """
         if print_prompt is None:
             print_prompt = self.verbose

@@ -243,9 +243,10 @@ class DetailedMobilityTrainer:
             self.log(f"{'-'*80}")
         
         # Get predictions
-        predictions, results = self.predictor.predict(
+        predictions, logits, candidate_list = self.predictor.predict(
             observation_trajectory=observation,
             ground_truth=ground_truth,
+            use_beam_search=True,
             print_prompt=False  # Already printed above
         )
         
