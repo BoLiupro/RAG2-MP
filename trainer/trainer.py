@@ -140,21 +140,42 @@ class MobilityTrainer:
             verbose=False  # Disable verbose during training
         )
 
-        # Freeze LLM parameters; train only classification head
-        for p in self.predictor.llm.model.parameters():
-            p.requires_grad = False
+        # LoRA微调：只训练LoRA参数和分类头，其余全部冻结
+        use_lora = False
+        if 'llm' in model_config:
+            use_lora = model_config['llm'].get('use_lora', False)
+        else:
+            use_lora = model_config.get('use_lora', False)
+
+        lora_params = []
+        if use_lora:
+            # 冻结所有参数
+            for p in self.predictor.llm.model.parameters():
+                p.requires_grad = False
+            # 只解冻LoRA参数
+            for n, p in self.predictor.llm.model.named_parameters():
+                if 'lora' in n or 'lora_' in n:
+                    p.requires_grad = True
+                    lora_params.append(p)
+            self.log(f"LoRA enabled: {len(lora_params)} trainable LLM params")
+        else:
+            # 完全冻结LLM
+            for p in self.predictor.llm.model.parameters():
+                p.requires_grad = False
+
+        # 分类头始终可训练
         for p in self.predictor.classification_head.parameters():
             p.requires_grad = True
-        
-        # Setup optimizer
+
+        # 优化器：只包含LoRA参数和分类头参数
         if not hasattr(self.predictor.llm, 'optimizer'):
-            trainable_params = list(self.predictor.classification_head.parameters())
+            trainable_params = lora_params + list(self.predictor.classification_head.parameters())
             self.predictor.llm.optimizer = torch.optim.AdamW(
                 trainable_params,
                 lr=self.config['training']['learning_rate'],
                 weight_decay=self.config['training']['weight_decay']
             )
-        
+
         self.log("Model initialized successfully")
     
     def compute_loss(
