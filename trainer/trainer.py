@@ -52,6 +52,7 @@ class MobilityTrainer:
         self.train_losses = []
         self.val_metrics = []
         self.best_val_acc = 0.0
+        self.log_every_n_steps = self.config['training'].get('log_every_n_steps', 50)
         
         print(f"\n{'='*70}")
         print("MOBILITY PREDICTION TRAINER INITIALIZED")
@@ -138,11 +139,18 @@ class MobilityTrainer:
             use_quantization=use_quantization,
             verbose=False  # Disable verbose during training
         )
+
+        # Freeze LLM parameters; train only classification head
+        for p in self.predictor.llm.model.parameters():
+            p.requires_grad = False
+        for p in self.predictor.classification_head.parameters():
+            p.requires_grad = True
         
         # Setup optimizer
         if not hasattr(self.predictor.llm, 'optimizer'):
+            trainable_params = list(self.predictor.classification_head.parameters())
             self.predictor.llm.optimizer = torch.optim.AdamW(
-                self.predictor.llm.model.parameters(),
+                trainable_params,
                 lr=self.config['training']['learning_rate'],
                 weight_decay=self.config['training']['weight_decay']
             )
@@ -156,7 +164,7 @@ class MobilityTrainer:
         print_details: bool = False
     ) -> Tuple[torch.Tensor, Dict[str, Any]]:
         """
-        Compute cross-entropy loss between LLM prediction and ground truth.
+        Compute cross-entropy loss using classification head output.
         
         Args:
             observation: Observation trajectory
@@ -167,6 +175,11 @@ class MobilityTrainer:
             Tuple of (loss tensor, info dict)
         """
         # Get RAG summary and gravity candidates (no gradient)
+        # Force eval mode for RAG to avoid dropout affecting retrieval
+        model_was_training = self.predictor.llm.model.training
+        self.predictor.llm.model.eval()
+        self.predictor.classification_head.eval()
+        self.predictor.classification_head.eval()
         with torch.no_grad():
             # RAG summary
             rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
@@ -177,8 +190,13 @@ class MobilityTrainer:
             # Gravity candidates
             current_location = observation[-1]['location_id']
             candidates_by_category = self.predictor.gravity.get_candidate_locations(
-                current_grid_id=current_location
+                current_grid_id=current_location,
+                return_scores=True
             )
+        
+        # Restore training mode for classification head training
+        if model_was_training:
+            self.predictor.llm.model.train()
         
         # Build prompt for final prediction
         prompt = self.predictor._build_prediction_prompt(
@@ -187,25 +205,9 @@ class MobilityTrainer:
             candidates_by_category=candidates_by_category
         )
         
-        # Build ground truth text
-        ground_truth_text = f"Grid {ground_truth}"
-        
-        # Tokenize prompt and ground truth
+        # Tokenize prompt
         llm = self.predictor.llm
-        
-        # Full input: prompt + ground truth
-        full_text = prompt + " " + ground_truth_text
-        
         inputs = llm.tokenizer(
-            full_text,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=1024
-        ).to(llm.device)
-        
-        # Get prompt length
-        prompt_inputs = llm.tokenizer(
             prompt,
             return_tensors="pt",
             padding=True,
@@ -213,71 +215,82 @@ class MobilityTrainer:
             max_length=1024
         ).to(llm.device)
         
-        prompt_length = prompt_inputs['input_ids'].shape[1]
+        # Get LLM hidden states without tracking grads (LLM frozen)
+        with torch.no_grad():
+            outputs = llm.model(
+                **inputs,
+                output_hidden_states=True
+            )
+
+        # Use last hidden state of the last token as context encoding (detach to save memory)
+        last_hidden_state = outputs.hidden_states[-1]  # (batch_size, seq_len, hidden_size)
+        context_encoding = last_hidden_state[:, -1, :].detach()  # (batch_size, hidden_size)
         
-        # Forward pass
-        outputs = llm.model(
-            input_ids=inputs['input_ids'],
-            attention_mask=inputs['attention_mask'],
-            labels=inputs['input_ids']  # For causal LM, labels = input_ids shifted
-        )
+        # Convert to float32 for numerical stability in classification head
+        if self.predictor.use_fp32_head:
+            context_encoding = context_encoding.float()
         
-        # Get loss only for the ground truth part (after prompt)
-        logits = outputs.logits  # Shape: (batch_size, seq_len, vocab_size)
+        # Classification head predicts over ALL grids (1600)
+        logits = self.predictor.classification_head(context_encoding)  # (batch_size, 1600)
         
-        # Shift logits and labels for next-token prediction
-        shift_logits = logits[:, prompt_length-1:-1, :].contiguous()
-        shift_labels = inputs['input_ids'][:, prompt_length:].contiguous()
+        # Ground truth is the grid ID directly
+        gt_tensor = torch.tensor([ground_truth], dtype=torch.long).to(llm.device)
         
-        # Compute cross-entropy loss
-        loss = F.cross_entropy(
-            shift_logits.view(-1, shift_logits.size(-1)),
-            shift_labels.view(-1),
-            ignore_index=llm.tokenizer.pad_token_id
-        )
+        # Compute cross-entropy loss over all grids
+        loss = F.cross_entropy(logits, gt_tensor)
+        
+        # Check for gradient issues
+        if torch.isnan(loss) or torch.isinf(loss):
+            raise ValueError(f"Loss is NaN or Inf: {loss.item()}")
+        
+        # Get predicted probabilities for logging
+        probs = F.softmax(logits, dim=1).squeeze(0)  # (1600,)
+        predicted_location = torch.argmax(probs).item()
+        gt_prob = probs[ground_truth].item()
         
         info = {
             'loss': loss.item(),
-            'prompt_length': prompt_length,
             'ground_truth': ground_truth,
-            'ground_truth_text': ground_truth_text
+            'predicted_location': predicted_location,
+            'gt_probability': gt_prob,
+            'num_grids': self.predictor.num_grids,
+            'logits_max': logits.max().item(),
+            'logits_min': logits.min().item(),
+            'logits_mean': logits.mean().item()
         }
-        
-        if print_details:
-            print(f"\nLoss computation details:")
-            print(f"  Ground truth: {ground_truth_text}")
-            print(f"  Prompt length: {prompt_length} tokens")
-            print(f"  Loss: {loss.item():.4f}")
         
         return loss, info
     
     def evaluate_predictions(
         self,
-        predictions: List[int],
+        predictions: List[Tuple[int, float]],
         ground_truth: int
     ) -> Dict[str, float]:
         """
         Evaluate predictions against ground truth.
         
         Args:
-            predictions: List of predicted location IDs (top-k)
+            predictions: List of (location_id, probability) tuples (top-k)
             ground_truth: Ground truth location ID
         
         Returns:
             Dictionary of evaluation metrics
         """
+        # Extract location IDs from predictions
+        predicted_locations = [loc_id for loc_id, prob in predictions]
+        
         metrics = {}
         
         # Top-K accuracy
         for k in [1, 3, 5, 10]:
-            if len(predictions) >= k:
-                metrics[f'acc@{k}'] = 1.0 if ground_truth in predictions[:k] else 0.0
+            if len(predicted_locations) >= k:
+                metrics[f'acc@{k}'] = 1.0 if ground_truth in predicted_locations[:k] else 0.0
             else:
-                metrics[f'acc@{k}'] = 1.0 if ground_truth in predictions else 0.0
+                metrics[f'acc@{k}'] = 1.0 if ground_truth in predicted_locations else 0.0
         
         # MRR (Mean Reciprocal Rank)
-        if ground_truth in predictions:
-            rank = predictions.index(ground_truth) + 1
+        if ground_truth in predicted_locations:
+            rank = predicted_locations.index(ground_truth) + 1
             metrics['mrr'] = 1.0 / rank
         else:
             metrics['mrr'] = 0.0
@@ -294,7 +307,8 @@ class MobilityTrainer:
         Returns:
             Dictionary of training metrics
         """
-        self.predictor.llm.model.train()
+        self.predictor.llm.model.eval()  # LLM frozen
+        self.predictor.classification_head.train()
         
         epoch_losses = []
         num_samples = min(
@@ -313,32 +327,68 @@ class MobilityTrainer:
         
         pbar = tqdm(sample_indices, desc=f"Epoch {epoch}")
         
-        for idx in pbar:
+        for step_idx, idx in enumerate(pbar, 1):
             sample = self.train_dataset[idx]
             observation = sample['observation']
             ground_truth = sample['next_location']
             
             try:
                 # Compute loss
-                loss, info = self.compute_loss(observation, ground_truth)
+                loss, info = self.compute_loss(observation, ground_truth,print_details=True)
                 
                 # Backward pass
                 self.predictor.llm.optimizer.zero_grad()
                 loss.backward()
                 
-                # Gradient clipping
+                # Check for gradient anomalies
+                total_norm = 0.0
+                has_nan_grad = False
+                has_inf_grad = False
+                for p in self.predictor.classification_head.parameters():
+                    if p.grad is not None:
+                        param_norm = p.grad.data.norm(2)
+                        total_norm += param_norm.item() ** 2
+                        if torch.isnan(p.grad).any():
+                            has_nan_grad = True
+                        if torch.isinf(p.grad).any():
+                            has_inf_grad = True
+                total_norm = total_norm ** 0.5
+                
+                if has_nan_grad:
+                    self.log(f"WARNING: NaN gradient detected at step {step_idx}")
+                    continue
+                if has_inf_grad:
+                    self.log(f"WARNING: Inf gradient detected at step {step_idx}")
+                    continue
+                if total_norm > 100.0:
+                    self.log(f"WARNING: Large gradient norm {total_norm:.2f} at step {step_idx}")
+                
+                # Gradient clipping (classification head only)
                 torch.nn.utils.clip_grad_norm_(
-                    self.predictor.llm.model.parameters(),
+                    self.predictor.classification_head.parameters(),
                     self.config['training']['max_grad_norm']
                 )
                 
                 # Optimizer step
                 self.predictor.llm.optimizer.step()
                 
+                # Log gradient statistics periodically
+                if step_idx % self.log_every_n_steps == 0:
+                    self.log(f"  Gradient norm: {total_norm:.4f}")
+                
                 epoch_losses.append(loss.item())
                 
                 # Update progress bar
                 pbar.set_postfix({'loss': f"{loss.item():.4f}"})
+                
+                # Periodic logging focused on training status (no prompts or summaries)
+                if step_idx % self.log_every_n_steps == 0:
+                    running_avg = np.mean(epoch_losses) if epoch_losses else 0.0
+                    self.log(
+                        f"Epoch {epoch} | Step {step_idx}/{num_samples} | "
+                        f"Batch Loss: {loss.item():.4f} | Running Avg Loss: {running_avg:.4f}",
+                        print_to_console=True
+                    )
                 
             except Exception as e:
                 self.log(f"Error processing sample {idx}: {e}", print_to_console=True)
@@ -387,24 +437,24 @@ class MobilityTrainer:
                 observation = sample['observation']
                 ground_truth = sample['next_location']
                 
-                try:
-                    # Compute loss
-                    loss, info = self.compute_loss(observation, ground_truth)
-                    val_losses.append(loss.item())
+                # try:
+                # Compute loss
+                loss, info = self.compute_loss(observation, ground_truth)
+                val_losses.append(loss.item())
+                
+                # Get predictions
+                predictions, results = self.predictor.predict(
+                    observation_trajectory=observation,
+                    ground_truth=ground_truth,
+                    print_prompt=False
+                )
+                
+                all_predictions.append(predictions)
+                all_ground_truths.append(ground_truth)
                     
-                    # Get predictions
-                    predictions, results = self.predictor.predict(
-                        observation_trajectory=observation,
-                        ground_truth=ground_truth,
-                        print_prompt=False
-                    )
-                    
-                    all_predictions.append(predictions)
-                    all_ground_truths.append(ground_truth)
-                    
-                except Exception as e:
-                    self.log(f"Error validating sample {idx}: {e}", print_to_console=False)
-                    continue
+                # except Exception as e:
+                #     self.log(f"Error validating sample {idx}: {e}", print_to_console=False)
+                #     continue
         
         # Compute metrics
         metrics = {
@@ -486,33 +536,16 @@ class MobilityTrainer:
                     all_predictions.append(predictions)
                     all_ground_truths.append(ground_truth)
                     
-                    # Detailed logging
-                    if detailed_log and sample_idx < 10:  # Log first 10 samples
+                    # Optional lightweight per-sample logging without prompts or summaries
+                    if detailed_log and sample_idx < 10:  # Log first 10 samples only
                         with open(detailed_log_file, 'a') as f:
                             f.write(f"\n{'='*70}\n")
                             f.write(f"TEST SAMPLE {sample_idx + 1}\n")
                             f.write(f"{'='*70}\n")
                             f.write(f"Ground Truth: Grid {ground_truth}\n")
-                            f.write(f"Predictions: {predictions}\n")
-                            f.write(f"Loss: {loss.item():.4f}\n\n")
-                            
-                            f.write("RAG Summary:\n")
-                            f.write(results.get('rag_summary', 'N/A'))
-                            f.write("\n\n")
-                            
-                            f.write("Gravity Candidates:\n")
-                            for category, candidates in results.get('candidates_by_category', {}).items():
-                                f.write(f"  {category}: {candidates[:3]}\n")
-                            f.write("\n")
-                            
-                            f.write("LLM Prediction Prompt:\n")
-                            f.write(results.get('prompt', 'N/A'))
-                            f.write("\n\n")
-                            
-                            f.write("LLM Response:\n")
-                            f.write(results.get('llm_response', 'N/A'))
-                            f.write("\n")
-                            f.write(f"{'='*70}\n\n")
+                            f.write(f"Top Predictions: {predictions}\n")
+                            f.write(f"Loss: {loss.item():.4f}\n")
+                            f.write(f"{'='*70}\n")
                     
                 except Exception as e:
                     self.log(f"Error testing sample {idx}: {e}")
@@ -565,6 +598,7 @@ class MobilityTrainer:
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.predictor.llm.model.state_dict(),
+            'classification_head_state_dict': self.predictor.classification_head.state_dict(),
             'optimizer_state_dict': self.predictor.llm.optimizer.state_dict(),
             'metrics': metrics,
             'config': self.config
@@ -578,6 +612,7 @@ class MobilityTrainer:
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': self.predictor.llm.model.state_dict(),
+                'classification_head_state_dict': self.predictor.classification_head.state_dict(),
                 'optimizer_state_dict': self.predictor.llm.optimizer.state_dict(),
                 'metrics': metrics,
                 'config': self.config
@@ -600,24 +635,30 @@ class MobilityTrainer:
             train_metrics = self.train_epoch(epoch)
             self.train_losses.append(train_metrics['train_loss'])
             
-            self.log(f"Train Loss: {train_metrics['train_loss']:.4f}")
+            self.log(
+                f"[Epoch {epoch}] Train Samples: {train_metrics['train_samples']} | "
+                f"Train Loss: {train_metrics['train_loss']:.4f}"
+            )
             
             # Validate
             if epoch % self.config['training']['val_every_n_epochs'] == 0:
                 val_metrics = self.validate(epoch)
                 self.val_metrics.append(val_metrics)
                 
-                self.log(f"Val Loss: {val_metrics['val_loss']:.4f}")
-                self.log(f"Val Acc@1: {val_metrics['val_acc@1']:.4f}")
-                self.log(f"Val Acc@3: {val_metrics['val_acc@3']:.4f}")
-                self.log(f"Val Acc@5: {val_metrics['val_acc@5']:.4f}")
-                self.log(f"Val MRR: {val_metrics['val_mrr']:.4f}")
+                self.log(
+                    f"[Epoch {epoch}] Val Samples: {val_metrics['val_samples']} | "
+                    f"Val Loss: {val_metrics['val_loss']:.4f} | "
+                    f"Acc@1: {val_metrics['val_acc@1']:.4f} | "
+                    f"Acc@3: {val_metrics['val_acc@3']:.4f} | "
+                    f"Acc@5: {val_metrics['val_acc@5']:.4f} | "
+                    f"MRR: {val_metrics['val_mrr']:.4f}"
+                )
                 
                 # Check if best model
                 is_best = val_metrics['val_acc@5'] > self.best_val_acc
                 if is_best:
                     self.best_val_acc = val_metrics['val_acc@5']
-                    self.log(f"New best model! Val Acc@5: {self.best_val_acc:.4f}")
+                    self.log(f"New best model! Acc@5 improved to {self.best_val_acc:.4f}")
                 
                 # Save checkpoint
                 if epoch % self.config['training']['save_every_n_epochs'] == 0:

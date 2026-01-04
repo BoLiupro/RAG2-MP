@@ -85,12 +85,12 @@ training:
   samples_per_epoch: 500  # Samples to train per epoch (null for all training data)
   
   # Optimizer parameters
-  learning_rate: 1.0e-4  # Learning rate for optimizer
+  learning_rate: 5.0e-5  # Learning rate for optimizer (reduced for stability)
   weight_decay: 0.01  # Weight decay (L2 regularization)
   optimizer: "adamw"  # Optimizer type: adamw, adam, sgd
   
   # Gradient control
-  max_grad_norm: 1.0  # Maximum gradient norm for clipping
+  max_grad_norm: 0.5  # Maximum gradient norm for clipping (reduced for stability)
   gradient_accumulation_steps: 1  # Steps to accumulate gradients (simulates larger batch)
   
   # Learning rate schedule

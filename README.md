@@ -394,7 +394,45 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 ## 输出格式
 - 提交修改后的RAG.py脚本文件。
 ---
+# Prompt_3.5[BUG修复]
+## 背景
+现在我在测试整个trainer.py脚本的过程中，发现LLM输出Rag_summary时出现异常。训练时第一个sample是正常的，但是第二个sample，synthesis_prompt="Analyze the following mobility patterns and provide a structured summary in JSON format.\n\nQuery trajectory ends at Grid 21\n\nRetrieved 5 similar general mobility (may include walking, public transport, taxi, etc.) patterns:\n\n1. Grid 21: 5 occurrences, distance 0.20 km, similarity -inf, area type: Dining & Cusine, Life Services, time patterns: 6:00-6:00, days: Thursday\n\nYou must respond with ONLY a valid JSON object in this exact format (no additional text, explanations, or markdown):\n\n{\n  "next_locations": [\n    {\n      "grid_id": <grid_id>,\n      "frequency": <number>,\n      "distance_km": <number>,\n      "area_type": "<poi_types or \'N/A\'>",\n      "reason": "<concise reason why this location is likely>"\n    }\n  ],\n  "spatial_patterns": "<describe distance trends and area characteristics in 1-2 sentences>",\n  "temporal_patterns": "<describe time patterns in 1-2 sentences, or \'No clear temporal pattern\'>"\n}\n\nInclude top 3-5 next locations. Keep total response under 200 words."，结果LLM却一直输出感叹号。可是detailed_trainer.py脚本中使用的是同样的prompt，却没有问题。我觉得可能是trainer.py脚本中对LLM的调用方式有问题，导致LLM无法正确理解和回答prompt。我希望你能帮我找出trainer.py脚本中对LLM调用的bug，并进行修复。## 任务
+请完成以下任务：
+1. **BUG修复**：
+   - 检查trainer.py脚本中对LLM的调用方式，找出可能导致LLM无法正确理解和回答prompt的bug。
+   - 修改trainer.py脚本，修复找到的bug，确保LLM能够正确理解和回答prompt。
+   - 测试修改后的trainer.py脚本，确保LLM输出的Rag_summary是正确的。
+   - 底线是根据detailed_trainer.py脚本中的调用方式，调整trainer.py脚本中的调用方式，使其保持一致。
 
+
+
+
+
+# Prompt_3.6[最终预测头和ComputeLoss函数修改]
+
+## 背景
+现在我已经完成了整个mobility prediction模型的训练流程，并且进行了测试。但是在实际运行过程中，我发现最终预测头和ComputeLoss函数需要进行一些修改和完善：
+1、最终预测头现在是直接利用LLM的生成输出作为预测结果。我觉得这样可能不够准确和稳定。我希望能够在最终预测头中，添加一个简单的分类器，对LLM的生成输出进行进一步处理和优化，从而提升预测的准确性。
+2、我想修改现在的预测和loss计算方式，把分类头输出的结果作为最终的预测结果。具体来说，分类头会输出每个候选位置的概率分布，然后根据这个概率分布选择top-K个位置作为最终的预测结果。这样可以更好地利用分类头的信息，提升预测的准确性。
+
+## 任务
+请完成以下任务：
+1. **最终预测头修改**：
+   - 修改MobilityPredictor.py脚本中的最终预测头部分，添加一个简单的分类器，对LLM的生成输出进行进一步处理和优化。
+2. **ComputeLoss函数修改**：
+   - 修改trainer.py脚本中的ComputeLoss函数，使用分类头的输出结果作为最终的预测结果。
+   - 设计一个新的损失计算方式，基于分类头输出的概率分布，计算交叉熵损失。
+3. **测试修改**：
+   - 测试修改后的MobilityPredictor.py和trainer.py脚本，确保最终预测头和ComputeLoss函数能够正确工作，并提升预测的准确性。
+
+## 约束
+- 使用Python编程语言。
+- 保持原有脚本的结构和逻辑，尽量只修改必要的部分。
+- trainer.py中不要太多的打印。
+
+## 输出格式
+- 提交修改后的MobilityPredictor.py和trainer.py脚本文件。
+---
 
 
 

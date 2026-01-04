@@ -5,6 +5,8 @@ This module integrates LLM+RAG and Gravity Model for mobility prediction.
 
 import numpy as np
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from typing import List, Dict, Any, Tuple
 from .LLM import MobilityLLM
 from .RAG import MobilityRAG
@@ -99,12 +101,51 @@ class MobilityPredictor:
             gravity_top_n_candidates=gravity_top_n_candidates,
             radius=gravity_radius
         )
+        
+        # Initialize Classification Head
+        # Projects LLM hidden states to all grid location probabilities
+        # Predict over all grids (40x40 = 1600 grids)
+        self.grid_size = 40
+        self.num_grids = self.grid_size * self.grid_size  # 1600
+        self.hidden_size = self.llm.model.config.hidden_size
+        
+        # Use LayerNorm for better numerical stability
+        self.classification_head = nn.Sequential(
+            nn.Linear(self.hidden_size, 512),
+            nn.LayerNorm(512),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(512, 256),
+            nn.LayerNorm(256),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(256, self.num_grids)  # Output logits for all 1600 grids
+        ).to(self.llm.device)
+        
+        # Initialize weights with smaller scale for stability
+        for module in self.classification_head.modules():
+            if isinstance(module, nn.Linear):
+                nn.init.xavier_uniform_(module.weight, gain=0.1)
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+        
+        # Match dtype with LLM model (handle quantization)
+        # Keep classification head in float32 for numerical stability even if LLM is float16
+        # We'll convert inputs to float32 when needed
+        self.use_fp32_head = True
+        if not self.use_fp32_head:
+            if hasattr(self.llm.model, 'dtype'):
+                self.classification_head = self.classification_head.to(self.llm.model.dtype)
+            else:
+                # For quantized models, use float16
+                self.classification_head = self.classification_head.half()
     
     def predict(
         self,
         observation_trajectory: List[Dict[str, Any]],
         ground_truth: int = None,
-        print_prompt: bool = None
+        print_prompt: bool = None,
+        return_logits: bool = False
     ) -> Tuple[List[Tuple[int, float]], Dict[str, Any]]:
         """
         Make mobility prediction for the next location.
@@ -113,11 +154,12 @@ class MobilityPredictor:
             observation_trajectory: List of trajectory points, each with 'location_id' and 'timestamp'
             ground_truth: Ground truth next location (optional, for evaluation)
             print_prompt: If True, print the final prediction prompt (overrides self.verbose)
+            return_logits: If True, return classification logits in results dict
         
         Returns:
             Tuple of:
                 - List of (location_id, confidence) tuples for top-K predictions
-                - Dictionary with intermediate results (summary, candidates, etc.)
+                - Dictionary with intermediate results (summary, candidates, logits, etc.)
         """
         if print_prompt is None:
             print_prompt = self.verbose
@@ -138,8 +180,8 @@ class MobilityPredictor:
             include_current=True  # Include current location for stationary behavior
         )
         
-        # Step 3: Make final prediction using LLM
-        predictions = self._generate_final_prediction(
+        # Step 3: Make final prediction using classification head
+        predictions, logits, candidate_list = self._generate_final_prediction_with_classifier(
             observation_trajectory=observation_trajectory,
             rag_summary=rag_summary,
             candidates_by_category=candidates_by_category,
@@ -154,10 +196,95 @@ class MobilityPredictor:
             'similarities': similarities,
             'candidates_by_category': candidates_by_category,
             'current_location': current_location,
-            'observation_trajectory': observation_trajectory
+            'observation_trajectory': observation_trajectory,
+            'candidate_list': candidate_list
         }
         
+        if return_logits:
+            results['logits'] = logits
+        
         return predictions, results
+    
+    def _generate_final_prediction_with_classifier(
+        self,
+        observation_trajectory: List[Dict[str, Any]],
+        rag_summary: str,
+        candidates_by_category: Dict[str, List[Tuple[int, float]]],
+        print_prompt: bool = True
+    ) -> Tuple[List[Tuple[int, float]], torch.Tensor, List[int]]:
+        """
+        Generate final prediction using LLM encoding + classification head.
+        
+        Args:
+            observation_trajectory: Observation trajectory
+            rag_summary: Summary from RAG retrieval
+            candidates_by_category: Candidates grouped by POI category
+            print_prompt: If True, print the prompt sent to LLM
+        
+        Returns:
+            Tuple of (predictions, logits, candidate_list)
+            - predictions: List of (location_id, confidence) tuples
+            - logits: Classification logits for all candidates
+            - candidate_list: List of candidate location IDs
+        """
+        # Build comprehensive prompt
+        prompt = self._build_final_prediction_prompt(
+            observation_trajectory,
+            rag_summary,
+            candidates_by_category
+        )
+        
+        # Get all unique candidate locations
+        all_candidates = set()
+        for category, candidates in candidates_by_category.items():
+            for grid_id, score in candidates:
+                all_candidates.add(grid_id)
+        
+        candidate_list = sorted(list(all_candidates))
+        
+        # Tokenize prompt
+        inputs = self.llm.tokenizer(
+            prompt,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=1024
+        ).to(self.llm.device)
+        
+        # Get LLM hidden states
+        with torch.no_grad():
+            outputs = self.llm.model(
+                **inputs,
+                output_hidden_states=True
+            )
+        
+        # Use last hidden state of the last token as context encoding
+        last_hidden_state = outputs.hidden_states[-1]  # (batch_size, seq_len, hidden_size)
+        context_encoding = last_hidden_state[:, -1, :]  # (batch_size, hidden_size)
+        
+        # Convert to float32 for numerical stability in classification head
+        if self.use_fp32_head:
+            context_encoding = context_encoding.float()
+        
+        # Classification head predicts over ALL grids (1600)
+        logits = self.classification_head(context_encoding)  # (batch_size, 1600)
+        
+        # Apply softmax to get probabilities over all grids
+        probs = F.softmax(logits, dim=1).squeeze(0)  # (1600,)
+        
+        # Get top-K predictions
+        top_k = min(self.top_k_predictions, self.num_grids)
+        top_probs, top_indices = torch.topk(probs, top_k)
+        
+        predictions = [
+            (idx.item(), prob.item())
+            for idx, prob in zip(top_indices, top_probs)
+        ]
+        
+        # Return all grids as candidate_list for compatibility
+        candidate_list = list(range(self.num_grids))
+        
+        return predictions, logits, candidate_list
     
     def _generate_final_prediction(
         self,
