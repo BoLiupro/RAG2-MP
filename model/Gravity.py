@@ -120,9 +120,9 @@ class GravityModel:
                 grid_id = self._coordinates_to_grid_id(row, col)
                 
                 # Check if within circular radius
-                distance = self._calculate_distance(current_grid_id, grid_id)
-                if distance <= self.radius:
-                    grids_within_radius.append(grid_id)
+                # distance = self._calculate_distance(current_grid_id, grid_id)
+                # if distance <= self.radius:
+                grids_within_radius.append(grid_id)
         
         return grids_within_radius
     

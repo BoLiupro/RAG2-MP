@@ -444,7 +444,7 @@ class MobilityPredictor:
             
             category_display = category.replace('_count', '')
             candidate_str = format_candidates_with_distances(
-                candidates[:3],
+                candidates,
                 current_location,
                 city=self.city,
                 include_scores=False

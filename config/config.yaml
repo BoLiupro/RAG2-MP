@@ -65,7 +65,7 @@ model:
   gravity:
     top_n_candidates: 5  # Number of top candidates per POI category
     weight: 1.0  # Weight parameter in gravity formula: score = weight * POI_count / distance^2
-    radius: 10  # Search radius in grid units
+    radius: 5  # Search radius in grid units
     grid_size: 40  # Grid system size (40x40 = 1600 grids)
     include_current: true  # Include current location in candidates (for stationary behavior)
   

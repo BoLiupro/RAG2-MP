@@ -284,8 +284,11 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 1、RAG_summary的生成部分需要调用LLM进行归纳总结，而不是简单拼接similar samples。prompt要引导从similar samples中提取出代表性的特征和模式并提供一个回答的模板，避免LLM
 的回答过于发散和格式过于混乱。
 2、RAG_suammary的长度可能需要控制，避免出现过长summry然后被截断的情况。我觉得可以设置一个最大长度的限制。
-
 ---
+# Prompt_2.7[Gravity模块Bug修改]
+## 背景
+现在我在测试Gravity模块的过程中，发现有一些bug需要修改：
+1、在
 
 
 
@@ -403,13 +406,8 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
    - 修改trainer.py脚本，修复找到的bug，确保LLM能够正确理解和回答prompt。
    - 测试修改后的trainer.py脚本，确保LLM输出的Rag_summary是正确的。
    - 底线是根据detailed_trainer.py脚本中的调用方式，调整trainer.py脚本中的调用方式，使其保持一致。
-
-
-
-
-
+---
 # Prompt_3.6[最终预测头和ComputeLoss函数修改]
-
 ## 背景
 现在我已经完成了整个mobility prediction模型的训练流程，并且进行了测试。但是在实际运行过程中，我发现最终预测头和ComputeLoss函数需要进行一些修改和完善：
 1、最终预测头现在是直接利用LLM的生成输出作为预测结果。我觉得这样可能不够准确和稳定。我希望能够在最终预测头中，添加一个简单的分类器，对LLM的生成输出进行进一步处理和优化，从而提升预测的准确性。
@@ -433,9 +431,7 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 ## 输出格式
 - 提交修改后的MobilityPredictor.py和trainer.py脚本文件。
 ---
-
-
-
+# Prompt
 # 实验设计(后续再完善)
 1. 消融实验：变体一：不用LLM+RAG的信息(w/o RAG)；变体二：不用gravity model输出的信息(w/o Gravity)；变体三：最终不用LLM进行预测（w/o LLM Predictor).
 2. 前期准备：6.1：RAG module的经验池准备：对训练集中的所有samples进行LLM编码，得到embedding，存储下来，作为经验池；6.2:拟合gravity model的参数，选择最优的weight参数和radius参数作为实验的默认值。
