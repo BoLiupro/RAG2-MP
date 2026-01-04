@@ -1,4 +1,5 @@
 raw_data/
 data/
 *.pkl
-util/rag_database
+util/rag_database/
+/workspace/China_Journal/output/

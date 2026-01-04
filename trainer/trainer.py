@@ -140,7 +140,7 @@ class MobilityTrainer:
             verbose=False  # Disable verbose during training
         )
 
-        # LoRA微调：只训练LoRA参数和分类头，其余全部冻结
+        # LoRA微调：只训练LoRA参数，其余全部冻结
         use_lora = False
         if 'llm' in model_config:
             use_lora = model_config['llm'].get('use_lora', False)
@@ -158,23 +158,21 @@ class MobilityTrainer:
                     p.requires_grad = True
                     lora_params.append(p)
             self.log(f"LoRA enabled: {len(lora_params)} trainable LLM params")
+            
+            # 优化器：只包含LoRA参数
+            if lora_params and not hasattr(self.predictor.llm, 'optimizer'):
+                self.predictor.llm.optimizer = torch.optim.AdamW(
+                    lora_params,
+                    lr=self.config['training']['learning_rate'],
+                    weight_decay=self.config['training']['weight_decay']
+                )
+            elif not lora_params:
+                self.log("WARNING: LoRA enabled but no LoRA parameters found. Model will be fully frozen.")
         else:
             # 完全冻结LLM
             for p in self.predictor.llm.model.parameters():
                 p.requires_grad = False
-
-        # 分类头始终可训练
-        for p in self.predictor.classification_head.parameters():
-            p.requires_grad = True
-
-        # 优化器：只包含LoRA参数和分类头参数
-        if not hasattr(self.predictor.llm, 'optimizer'):
-            trainable_params = lora_params + list(self.predictor.classification_head.parameters())
-            self.predictor.llm.optimizer = torch.optim.AdamW(
-                trainable_params,
-                lr=self.config['training']['learning_rate'],
-                weight_decay=self.config['training']['weight_decay']
-            )
+            self.log("LLM fully frozen (no LoRA)")
 
         self.log("Model initialized successfully")
     
@@ -185,7 +183,7 @@ class MobilityTrainer:
         print_details: bool = False
     ) -> Tuple[torch.Tensor, Dict[str, Any]]:
         """
-        Compute cross-entropy loss using classification head output.
+        Compute loss using LLM generation with teacher forcing.
         
         Args:
             observation: Observation trajectory
@@ -197,10 +195,8 @@ class MobilityTrainer:
         """
         # Get RAG summary and gravity candidates (no gradient)
         # Force eval mode for RAG to avoid dropout affecting retrieval
-        model_was_training = self.predictor.llm.model.training
         self.predictor.llm.model.eval()
-        self.predictor.classification_head.eval()
-        self.predictor.classification_head.eval()
+        
         with torch.no_grad():
             # RAG summary
             rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
@@ -215,9 +211,8 @@ class MobilityTrainer:
                 return_scores=True
             )
         
-        # Restore training mode for classification head training
-        if model_was_training:
-            self.predictor.llm.model.train()
+        # Model should stay in eval mode for forward pass (no trainable params in this case)
+        self.predictor.llm.model.eval()
         
         # Build prompt for final prediction
         prompt = self.predictor._build_prediction_prompt(
@@ -226,59 +221,99 @@ class MobilityTrainer:
             candidates_by_category=candidates_by_category
         )
         
-        # Tokenize prompt
+        # Build ground truth template
+        gt_template = f" Grid {ground_truth}"
+        
+        # Tokenize prompt first to check length
         llm = self.predictor.llm
-        inputs = llm.tokenizer(
+        prompt_inputs = llm.tokenizer(
             prompt,
             return_tensors="pt",
             padding=True,
             truncation=True,
-            max_length=1024
-        ).to(llm.device)
+            max_length=1000  # Leave room for GT template
+        )
         
-        # Get LLM hidden states without tracking grads (LLM frozen)
-        with torch.no_grad():
-            outputs = llm.model(
-                **inputs,
-                output_hidden_states=True
-            )
-
-        # Use last hidden state of the last token as context encoding (detach to save memory)
-        last_hidden_state = outputs.hidden_states[-1]  # (batch_size, seq_len, hidden_size)
-        context_encoding = last_hidden_state[:, -1, :].detach()  # (batch_size, hidden_size)
+        # Tokenize GT template separately (don't truncate)
+        gt_inputs = llm.tokenizer(
+            gt_template,
+            return_tensors="pt",
+            add_special_tokens=False
+        )
         
-        # Convert to float32 for numerical stability in classification head
-        if self.predictor.use_fp32_head:
-            context_encoding = context_encoding.float()
+        # Concatenate token IDs
+        full_input_ids = torch.cat([
+            prompt_inputs['input_ids'],
+            gt_inputs['input_ids']
+        ], dim=1).to(llm.device)
         
-        # Classification head predicts over ALL grids (1600)
-        logits = self.predictor.classification_head(context_encoding)  # (batch_size, 1600)
+        # Create attention mask
+        full_attention_mask = torch.ones_like(full_input_ids).to(llm.device)
         
-        # Ground truth is the grid ID directly
-        gt_tensor = torch.tensor([ground_truth], dtype=torch.long).to(llm.device)
+        inputs = {
+            'input_ids': full_input_ids,
+            'attention_mask': full_attention_mask
+        }
         
-        # Compute cross-entropy loss over all grids
-        loss = F.cross_entropy(logits, gt_tensor)
+        prompt_length = prompt_inputs.input_ids.shape[1]
+        
+        # Forward pass through LLM
+        outputs = llm.model(
+            **inputs
+        )
+        
+        # Get logits for next token prediction
+        logits = outputs.logits  # (batch_size, seq_len, vocab_size)
+        
+        # Compute loss only on the generated tokens (teacher forcing)
+        # Standard approach: predict token at position i using tokens 0..i-1
+        # We want to predict the GT template tokens using the prompt as context
+        
+        # Get GT token positions
+        prompt_length = prompt_inputs.input_ids.shape[1]
+        full_length = inputs['input_ids'].shape[1]
+        
+        # Check if we have GT tokens
+        if prompt_length >= full_length:
+            raise ValueError(f"No ground truth tokens: prompt_length={prompt_length}, full_length={full_length}")
+        
+        # logits[:, i-1, :] predicts token at position i
+        # We want to predict GT tokens at positions [prompt_length, prompt_length+1, ..., full_length-1]
+        # So we need logits at positions [prompt_length-1, prompt_length, ..., full_length-2]
+        pred_logits = logits[:, prompt_length-1:full_length-1, :].contiguous()
+        gt_labels = inputs['input_ids'][:, prompt_length:full_length].contiguous()
+        
+        # Check shapes match
+        assert pred_logits.shape[1] == gt_labels.shape[1], \
+            f"Shape mismatch: pred_logits={pred_logits.shape}, gt_labels={gt_labels.shape}"
+        
+        # Compute cross-entropy loss
+        loss_fct = torch.nn.CrossEntropyLoss(ignore_index=-100)
+        loss = loss_fct(
+            pred_logits.view(-1, pred_logits.size(-1)),
+            gt_labels.view(-1)
+        )
         
         # Check for gradient issues
         if torch.isnan(loss) or torch.isinf(loss):
             raise ValueError(f"Loss is NaN or Inf: {loss.item()}")
         
-        # Get predicted probabilities for logging
-        probs = F.softmax(logits, dim=1).squeeze(0)  # (1600,)
-        predicted_location = torch.argmax(probs).item()
-        gt_prob = probs[ground_truth].item()
+        # Parse generated prediction for logging (greedy decode)
+        with torch.no_grad():
+            pred_token_ids = torch.argmax(pred_logits, dim=-1)
+            pred_text = llm.tokenizer.decode(pred_token_ids[0], skip_special_tokens=True)
+            predicted_grid = self.predictor._parse_grid_id_from_response(pred_text)
         
         info = {
             'loss': loss.item(),
             'ground_truth': ground_truth,
-            'predicted_location': predicted_location,
-            'gt_probability': gt_prob,
-            'num_grids': self.predictor.num_grids,
-            'logits_max': logits.max().item(),
-            'logits_min': logits.min().item(),
-            'logits_mean': logits.mean().item()
+            'predicted_location': predicted_grid if predicted_grid is not None else -1,
+            'num_gt_tokens': gt_labels.shape[1],
+            'prompt_length': prompt_length
         }
+        
+        if print_details:
+            self.log(f"  Ground truth: Grid {ground_truth}, Predicted: {pred_text.strip()}")
         
         return loss, info
     
@@ -328,8 +363,15 @@ class MobilityTrainer:
         Returns:
             Dictionary of training metrics
         """
-        self.predictor.llm.model.eval()  # LLM frozen
-        self.predictor.classification_head.train()
+        # Set model to appropriate mode
+        # If LoRA enabled, set to train mode for LoRA params; otherwise eval
+        use_lora = self.config['model'].get('llm', {}).get('use_lora', False) or \
+                   self.config['model'].get('use_lora', False)
+        
+        if use_lora:
+            self.predictor.llm.model.train()
+        else:
+            self.predictor.llm.model.eval()
         
         epoch_losses = []
         num_samples = min(
@@ -355,47 +397,53 @@ class MobilityTrainer:
             
             try:
                 # Compute loss
-                loss, info = self.compute_loss(observation, ground_truth,print_details=True)
+                loss, info = self.compute_loss(observation, ground_truth, print_details=(step_idx % self.log_every_n_steps == 0))
                 
                 # Backward pass
-                self.predictor.llm.optimizer.zero_grad()
-                loss.backward()
-                
-                # Check for gradient anomalies
-                total_norm = 0.0
-                has_nan_grad = False
-                has_inf_grad = False
-                for p in self.predictor.classification_head.parameters():
-                    if p.grad is not None:
-                        param_norm = p.grad.data.norm(2)
-                        total_norm += param_norm.item() ** 2
-                        if torch.isnan(p.grad).any():
-                            has_nan_grad = True
-                        if torch.isinf(p.grad).any():
-                            has_inf_grad = True
-                total_norm = total_norm ** 0.5
-                
-                if has_nan_grad:
-                    self.log(f"WARNING: NaN gradient detected at step {step_idx}")
-                    continue
-                if has_inf_grad:
-                    self.log(f"WARNING: Inf gradient detected at step {step_idx}")
-                    continue
-                if total_norm > 100.0:
-                    self.log(f"WARNING: Large gradient norm {total_norm:.2f} at step {step_idx}")
-                
-                # Gradient clipping (classification head only)
-                torch.nn.utils.clip_grad_norm_(
-                    self.predictor.classification_head.parameters(),
-                    self.config['training']['max_grad_norm']
-                )
-                
-                # Optimizer step
-                self.predictor.llm.optimizer.step()
-                
-                # Log gradient statistics periodically
-                if step_idx % self.log_every_n_steps == 0:
-                    self.log(f"  Gradient norm: {total_norm:.4f}")
+                if use_lora and hasattr(self.predictor.llm, 'optimizer'):
+                    self.predictor.llm.optimizer.zero_grad()
+                    loss.backward()
+                    
+                    # Check for gradient anomalies in LoRA params
+                    total_norm = 0.0
+                    has_nan_grad = False
+                    has_inf_grad = False
+                    for n, p in self.predictor.llm.model.named_parameters():
+                        if p.requires_grad and p.grad is not None:
+                            param_norm = p.grad.data.norm(2)
+                            total_norm += param_norm.item() ** 2
+                            if torch.isnan(p.grad).any():
+                                has_nan_grad = True
+                            if torch.isinf(p.grad).any():
+                                has_inf_grad = True
+                    total_norm = total_norm ** 0.5
+                    
+                    if has_nan_grad:
+                        self.log(f"WARNING: NaN gradient detected at step {step_idx}")
+                        continue
+                    if has_inf_grad:
+                        self.log(f"WARNING: Inf gradient detected at step {step_idx}")
+                        continue
+                    if total_norm > 100.0:
+                        self.log(f"WARNING: Large gradient norm {total_norm:.2f} at step {step_idx}")
+                    
+                    # Gradient clipping (LoRA params only)
+                    trainable_params = [p for p in self.predictor.llm.model.parameters() if p.requires_grad]
+                    torch.nn.utils.clip_grad_norm_(
+                        trainable_params,
+                        self.config['training']['max_grad_norm']
+                    )
+                    
+                    # Optimizer step
+                    self.predictor.llm.optimizer.step()
+                    
+                    # Log gradient statistics periodically
+                    if step_idx % self.log_every_n_steps == 0:
+                        self.log(f"  Gradient norm: {total_norm:.4f}")
+                else:
+                    # No trainable params (pure frozen LLM)
+                    # Still compute loss for logging but don't backprop
+                    pass
                 
                 epoch_losses.append(loss.item())
                 
@@ -413,6 +461,8 @@ class MobilityTrainer:
                 
             except Exception as e:
                 self.log(f"Error processing sample {idx}: {e}", print_to_console=True)
+                import traceback
+                self.log(traceback.format_exc(), print_to_console=False)
                 continue
         
         metrics = {
@@ -463,11 +513,12 @@ class MobilityTrainer:
                 loss, info = self.compute_loss(observation, ground_truth)
                 val_losses.append(loss.item())
                 
-                # Get predictions
-                predictions, results = self.predictor.predict(
+                # Get predictions with beam search
+                predictions, logits, _ = self.predictor.predict(
                     observation_trajectory=observation,
                     ground_truth=ground_truth,
-                    print_prompt=False
+                    print_prompt=False,
+                    use_beam_search=True  # Use beam search for validation
                 )
                 
                 all_predictions.append(predictions)
@@ -543,11 +594,12 @@ class MobilityTrainer:
                 ground_truth = sample['next_location']
                 
                 try:
-                    # Get predictions with intermediate results
-                    predictions, results = self.predictor.predict(
+                    # Get predictions with beam search
+                    predictions, logits, _ = self.predictor.predict(
                         observation_trajectory=observation,
                         ground_truth=ground_truth,
-                        print_prompt=False
+                        print_prompt=False,
+                        use_beam_search=True  # Use beam search for testing
                     )
                     
                     # Compute loss
@@ -616,28 +668,33 @@ class MobilityTrainer:
         # Save model state
         checkpoint_path = os.path.join(checkpoint_dir, f'checkpoint_epoch_{epoch}.pt')
         
-        torch.save({
+        checkpoint_data = {
             'epoch': epoch,
             'model_state_dict': self.predictor.llm.model.state_dict(),
-            'classification_head_state_dict': self.predictor.classification_head.state_dict(),
-            'optimizer_state_dict': self.predictor.llm.optimizer.state_dict(),
             'metrics': metrics,
             'config': self.config
-        }, checkpoint_path)
+        }
+        
+        # Add optimizer state if LoRA is enabled
+        if hasattr(self.predictor.llm, 'optimizer'):
+            checkpoint_data['optimizer_state_dict'] = self.predictor.llm.optimizer.state_dict()
+        
+        torch.save(checkpoint_data, checkpoint_path)
         
         self.log(f"Checkpoint saved: {checkpoint_path}")
         
         # Save best model
         if is_best:
             best_path = os.path.join(checkpoint_dir, 'best_model.pt')
-            torch.save({
+            best_checkpoint_data = {
                 'epoch': epoch,
                 'model_state_dict': self.predictor.llm.model.state_dict(),
-                'classification_head_state_dict': self.predictor.classification_head.state_dict(),
-                'optimizer_state_dict': self.predictor.llm.optimizer.state_dict(),
                 'metrics': metrics,
                 'config': self.config
-            }, best_path)
+            }
+            if hasattr(self.predictor.llm, 'optimizer'):
+                best_checkpoint_data['optimizer_state_dict'] = self.predictor.llm.optimizer.state_dict()
+            torch.save(best_checkpoint_data, best_path)
             self.log(f"Best model saved: {best_path}")
     
     def train(self):

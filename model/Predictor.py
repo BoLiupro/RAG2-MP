@@ -65,6 +65,7 @@ class MobilityPredictor:
         self.gravity_weight = gravity_weight
         self.gravity_radius = gravity_radius
         self.verbose = verbose
+        self.num_grids = 1600  # Standard grid size for all cities
         
         # Initialize LLM
         self.llm = MobilityLLM(
@@ -101,65 +102,27 @@ class MobilityPredictor:
             gravity_top_n_candidates=gravity_top_n_candidates,
             radius=gravity_radius
         )
-        
-        # Initialize Classification Head
-        # Projects LLM hidden states to all grid location probabilities
-        # Predict over all grids (40x40 = 1600 grids)
-        self.grid_size = 40
-        self.num_grids = self.grid_size * self.grid_size  # 1600
-        self.hidden_size = self.llm.model.config.hidden_size
-        
-        # Use LayerNorm for better numerical stability
-        self.classification_head = nn.Sequential(
-            nn.Linear(self.hidden_size, 512),
-            nn.LayerNorm(512),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(512, 256),
-            nn.LayerNorm(256),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(256, self.num_grids)  # Output logits for all 1600 grids
-        ).to(self.llm.device)
-        
-        # Initialize weights with smaller scale for stability
-        for module in self.classification_head.modules():
-            if isinstance(module, nn.Linear):
-                nn.init.xavier_uniform_(module.weight, gain=0.1)
-                if module.bias is not None:
-                    nn.init.zeros_(module.bias)
-        
-        # Match dtype with LLM model (handle quantization)
-        # Keep classification head in float32 for numerical stability even if LLM is float16
-        # We'll convert inputs to float32 when needed
-        self.use_fp32_head = True
-        if not self.use_fp32_head:
-            if hasattr(self.llm.model, 'dtype'):
-                self.classification_head = self.classification_head.to(self.llm.model.dtype)
-            else:
-                # For quantized models, use float16
-                self.classification_head = self.classification_head.half()
     
     def predict(
         self,
         observation_trajectory: List[Dict[str, Any]],
         ground_truth: int = None,
         print_prompt: bool = None,
-        return_logits: bool = False
+        use_beam_search: bool = False
     ) -> Tuple[List[Tuple[int, float]], Dict[str, Any]]:
         """
-        Make mobility prediction for the next location.
+        Make mobility prediction for the next location using LLM generation.
         
         Args:
             observation_trajectory: List of trajectory points, each with 'location_id' and 'timestamp'
             ground_truth: Ground truth next location (optional, for evaluation)
             print_prompt: If True, print the final prediction prompt (overrides self.verbose)
-            return_logits: If True, return classification logits in results dict
+            use_beam_search: If True, use beam search for multiple predictions (testing)
         
         Returns:
             Tuple of:
                 - List of (location_id, confidence) tuples for top-K predictions
-                - Dictionary with intermediate results (summary, candidates, logits, etc.)
+                - Dictionary with intermediate results (summary, candidates, etc.)
         """
         if print_prompt is None:
             print_prompt = self.verbose
@@ -180,12 +143,13 @@ class MobilityPredictor:
             include_current=True  # Include current location for stationary behavior
         )
         
-        # Step 3: Make final prediction using classification head
+        # Step 3: Make final prediction using LLM generation
         predictions, logits, candidate_list = self._generate_final_prediction_with_classifier(
             observation_trajectory=observation_trajectory,
             rag_summary=rag_summary,
             candidates_by_category=candidates_by_category,
-            print_prompt=print_prompt
+            print_prompt=print_prompt,
+            use_beam_search=use_beam_search
         )
         
         # Prepare results dictionary
@@ -197,35 +161,35 @@ class MobilityPredictor:
             'candidates_by_category': candidates_by_category,
             'current_location': current_location,
             'observation_trajectory': observation_trajectory,
-            'candidate_list': candidate_list
+            'candidate_list': candidate_list,
+            'logits': logits  # May be None for generation-based approach
         }
         
-        if return_logits:
-            results['logits'] = logits
-        
-        return predictions, results
+        return predictions, logits, candidate_list
     
     def _generate_final_prediction_with_classifier(
         self,
         observation_trajectory: List[Dict[str, Any]],
         rag_summary: str,
         candidates_by_category: Dict[str, List[Tuple[int, float]]],
-        print_prompt: bool = True
+        print_prompt: bool = True,
+        use_beam_search: bool = False
     ) -> Tuple[List[Tuple[int, float]], torch.Tensor, List[int]]:
         """
-        Generate final prediction using LLM encoding + classification head.
+        Generate final prediction using LLM generation (with or without beam search).
         
         Args:
             observation_trajectory: Observation trajectory
             rag_summary: Summary from RAG retrieval
             candidates_by_category: Candidates grouped by POI category
             print_prompt: If True, print the prompt sent to LLM
+            use_beam_search: If True, use beam search for multiple predictions
         
         Returns:
             Tuple of (predictions, logits, candidate_list)
             - predictions: List of (location_id, confidence) tuples
-            - logits: Classification logits for all candidates
-            - candidate_list: List of candidate location IDs
+            - logits: None (no logits for generation-based approach)
+            - candidate_list: List of all grid IDs
         """
         # Build comprehensive prompt
         prompt = self._build_final_prediction_prompt(
@@ -251,40 +215,103 @@ class MobilityPredictor:
             max_length=1024
         ).to(self.llm.device)
         
-        # Get LLM hidden states
-        with torch.no_grad():
-            outputs = self.llm.model(
-                **inputs,
-                output_hidden_states=True
-            )
+        if use_beam_search:
+            # Testing mode: Use beam search for multiple predictions
+            with torch.no_grad():
+                outputs = self.llm.model.generate(
+                    **inputs,
+                    max_new_tokens=20,
+                    num_beams=self.top_k_predictions,
+                    num_return_sequences=self.top_k_predictions,
+                    early_stopping=True,
+                    pad_token_id=self.llm.tokenizer.pad_token_id,
+                    eos_token_id=self.llm.tokenizer.eos_token_id
+                )
+            
+            # Decode all beam search results
+            predictions = []
+            for i, output in enumerate(outputs):
+                generated_text = self.llm.tokenizer.decode(output, skip_special_tokens=True)
+                
+                # Extract generated part (remove prompt)
+                if generated_text.startswith(prompt):
+                    response = generated_text[len(prompt):].strip()
+                else:
+                    response = generated_text.strip()
+                
+                # Parse grid_id from response
+                grid_id = self._parse_grid_id_from_response(response)
+                
+                if grid_id is not None and 0 <= grid_id < self.num_grids:
+                    # Confidence decreases with beam rank
+                    confidence = 1.0 / (i + 1)
+                    predictions.append((grid_id, confidence))
+            
+            # Fill with candidates if needed
+            seen_grids = {grid_id for grid_id, _ in predictions}
+            for grid_id in candidate_list:
+                if grid_id not in seen_grids and len(predictions) < self.top_k_predictions:
+                    confidence = 1.0 / (len(predictions) + 1)
+                    predictions.append((grid_id, confidence))
+                    seen_grids.add(grid_id)
         
-        # Use last hidden state of the last token as context encoding
-        last_hidden_state = outputs.hidden_states[-1]  # (batch_size, seq_len, hidden_size)
-        context_encoding = last_hidden_state[:, -1, :]  # (batch_size, hidden_size)
+        else:
+            # Training mode: Greedy generation (single output)
+            with torch.no_grad():
+                outputs = self.llm.model.generate(
+                    **inputs,
+                    max_new_tokens=20,
+                    num_beams=1,
+                    do_sample=False,
+                    pad_token_id=self.llm.tokenizer.pad_token_id,
+                    eos_token_id=self.llm.tokenizer.eos_token_id
+                )
+            
+            generated_text = self.llm.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
+            # Extract generated part
+            if generated_text.startswith(prompt):
+                response = generated_text[len(prompt):].strip()
+            else:
+                response = generated_text.strip()
+            
+            # Parse grid_id from response
+            grid_id = self._parse_grid_id_from_response(response)
+            
+            if grid_id is not None and 0 <= grid_id < self.num_grids:
+                predictions = [(grid_id, 1.0)]
+            else:
+                # Fallback to first candidate
+                predictions = [(candidate_list[0], 1.0)] if candidate_list else [(0, 1.0)]
         
-        # Convert to float32 for numerical stability in classification head
-        if self.use_fp32_head:
-            context_encoding = context_encoding.float()
-        
-        # Classification head predicts over ALL grids (1600)
-        logits = self.classification_head(context_encoding)  # (batch_size, 1600)
-        
-        # Apply softmax to get probabilities over all grids
-        probs = F.softmax(logits, dim=1).squeeze(0)  # (1600,)
-        
-        # Get top-K predictions
-        top_k = min(self.top_k_predictions, self.num_grids)
-        top_probs, top_indices = torch.topk(probs, top_k)
-        
-        predictions = [
-            (idx.item(), prob.item())
-            for idx, prob in zip(top_indices, top_probs)
-        ]
-        
-        # Return all grids as candidate_list for compatibility
+        # Return predictions (no logits needed for generation-based approach)
         candidate_list = list(range(self.num_grids))
+        return predictions, None, candidate_list
+    
+    def _parse_grid_id_from_response(self, response: str) -> int:
+        """
+        Parse grid_id from LLM response.
+        Expected format: "Grid 123" or "123"
         
-        return predictions, logits, candidate_list
+        Args:
+            response: LLM response text
+        
+        Returns:
+            grid_id as integer, or None if parsing fails
+        """
+        import re
+        
+        # Try pattern "Grid XXX"
+        match = re.search(r'Grid\s+(\d+)', response, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+        
+        # Try just digits
+        match = re.search(r'(\d+)', response)
+        if match:
+            return int(match.group(1))
+        
+        return None
     
     def _generate_final_prediction(
         self,
@@ -460,15 +487,14 @@ class MobilityPredictor:
         
         candidate_list_str = ", ".join([f"Grid {c}" for c in sorted(list(all_candidates))[:20]])
         
-        # Add prediction instruction
+        # Add prediction instruction - simplified for single grid output
         prompt += f"\n## Your Task:\n"
         prompt += f"Based on the trajectory pattern, similar historical behaviors, and candidate locations, "
-        prompt += f"predict the top {self.top_k_predictions} most likely next locations.\n"
-        prompt += f"Remember: The user may stay at the current location (Grid {current_location}) or move to a new location.\n"
-        prompt += f"Choose from these candidates: {candidate_list_str}\n\n"
-        prompt += f"Format your answer as: Grid [ID], Grid [ID], Grid [ID], ...\n"
-        prompt += f"Provide exactly {self.top_k_predictions} predictions in order of likelihood.\n\n"
-        prompt += "Your predictions:"
+        prompt += f"predict the next most likely location.\n"
+        prompt += f"Remember: The user may stay at the current location (Grid {current_location}) or move to a new location.\n\n"
+        prompt += f"Output format: Grid [ID]\n"
+        prompt += f"Output only the grid ID, no explanation.\n\n"
+        prompt += "Your prediction:"
         
         return prompt
     
