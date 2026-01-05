@@ -221,7 +221,7 @@ class MobilityPredictor:
                     num_beams=self.top_k_predictions,
                     num_return_sequences=self.top_k_predictions,
                     do_sample=True,  # Enable sampling within beam search
-                    temperature=1.0,  # Moderate temperature for diversity
+                    temperature=0.7,  # Moderate temperature for diversity
                     top_k=50,
                     top_p=0.9,
                     early_stopping=True,

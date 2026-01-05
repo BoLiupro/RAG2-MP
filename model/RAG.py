@@ -396,7 +396,7 @@ Output only json, no explanation.
             llm_response = self.llm.generate(
                 prompt=synthesis_prompt,
                 max_new_tokens=min(max_summary_length, 500),  # Increased for JSON output
-                temperature=0.1,  # Very low temperature for structured output
+                temperature=0.7,  # Very low temperature for structured output
                 do_sample=False  # Disable sampling for more deterministic output
             )
             

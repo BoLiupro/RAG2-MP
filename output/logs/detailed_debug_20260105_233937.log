@@ -1,1 +1,687 @@
 [2026-01-05 23:39:37] Loading datasets...
+[2026-01-05 23:40:16] Train samples: 10
+[2026-01-05 23:40:16] Validation samples: 10
+[2026-01-05 23:40:16] Test samples: 10
+[2026-01-05 23:40:16] 
+Initializing MobilityPredictor model...
+[2026-01-05 23:40:16]   LLM Model: Llama-2-7B
+[2026-01-05 23:40:16]   RAG Top-M Samples: 5
+[2026-01-05 23:40:16]   Gravity Top-N Candidates: 3
+[2026-01-05 23:40:16]   Prediction Top-K: 10
+[2026-01-05 23:40:29] Model initialized successfully
+
+[2026-01-05 23:40:29] 
+================================================================================
+[2026-01-05 23:40:29] STARTING DETAILED TESTING (DEBUG MODE)
+[2026-01-05 23:40:29] ================================================================================
+[2026-01-05 23:40:29] 
+Testing on 10 samples...
+
+[2026-01-05 23:40:29] 
+================================================================================
+[2026-01-05 23:40:29] DEBUGGING SAMPLE 1
+[2026-01-05 23:40:29] ================================================================================
+[2026-01-05 23:40:29] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 23:40:29]   1. Location 804 at 20220708 08:30
+[2026-01-05 23:40:29]   2. Location 804 at 20220708 14:30
+[2026-01-05 23:40:29]   3. Location 804 at 20220708 20:30
+[2026-01-05 23:40:29]   4. Location 804 at 20220709 03:30
+[2026-01-05 23:40:29]   5. Location 1216 at 20220711 05:30
+[2026-01-05 23:40:29]   6. Location 1216 at 20220713 20:30
+[2026-01-05 23:40:29]   7. Location 1176 at 20220715 08:30
+[2026-01-05 23:40:29]   8. Location 1176 at 20220716 07:30
+[2026-01-05 23:40:29]   9. Location 1176 at 20220719 00:30
+[2026-01-05 23:40:29]   10. Location 1176 at 20220720 10:00
+[2026-01-05 23:40:29]   11. Location 1176 at 20220721 02:00
+[2026-01-05 23:40:29]   12. Location 1176 at 20220721 06:00
+[2026-01-05 23:40:29] 
+📍 Current Location: Grid 1176
+[2026-01-05 23:40:29] 🎯 Ground Truth Next Location: Grid 1176
+[2026-01-05 23:40:29] 
+--------------------------------------------------------------------------------
+[2026-01-05 23:40:29] STAGE 1: RAG RETRIEVAL
+[2026-01-05 23:40:29] --------------------------------------------------------------------------------
+[2026-01-05 23:40:29] 
+❌ Error processing sample 0: 
+[2026-01-05 23:40:29] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 196, in retrieve_similar_samples
+    similarities, indices = self.compute_similarity(query_embedding, top_k=rag_top_m_samples)
+                            ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/China_Journal/model/RAG.py", line 163, in compute_similarity
+    similarities, indices = self.faiss_index.search(
+                            ~~~~~~~~~~~~~~~~~~~~~~~^
+        query_embedding.astype('float32'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        top_k
+        ^^^^^
+    )
+    ^
+  File "/root/miniconda3/lib/python3.13/site-packages/faiss/class_wrappers.py", line 383, in replacement_search
+    assert d == self.d
+           ^^^^^^^^^^^
+AssertionError
+
+[2026-01-05 23:40:29] 
+================================================================================
+[2026-01-05 23:40:29] DEBUGGING SAMPLE 2
+[2026-01-05 23:40:29] ================================================================================
+[2026-01-05 23:40:29] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 23:40:29]   1. Location 804 at 20220708 14:30
+[2026-01-05 23:40:29]   2. Location 804 at 20220708 20:30
+[2026-01-05 23:40:29]   3. Location 804 at 20220709 03:30
+[2026-01-05 23:40:29]   4. Location 1216 at 20220711 05:30
+[2026-01-05 23:40:29]   5. Location 1216 at 20220713 20:30
+[2026-01-05 23:40:29]   6. Location 1176 at 20220715 08:30
+[2026-01-05 23:40:29]   7. Location 1176 at 20220716 07:30
+[2026-01-05 23:40:29]   8. Location 1176 at 20220719 00:30
+[2026-01-05 23:40:29]   9. Location 1176 at 20220720 10:00
+[2026-01-05 23:40:29]   10. Location 1176 at 20220721 02:00
+[2026-01-05 23:40:29]   11. Location 1176 at 20220721 06:00
+[2026-01-05 23:40:29]   12. Location 1176 at 20220721 20:30
+[2026-01-05 23:40:29] 
+📍 Current Location: Grid 1176
+[2026-01-05 23:40:29] 🎯 Ground Truth Next Location: Grid 1216
+[2026-01-05 23:40:29] 
+--------------------------------------------------------------------------------
+[2026-01-05 23:40:29] STAGE 1: RAG RETRIEVAL
+[2026-01-05 23:40:29] --------------------------------------------------------------------------------
+[2026-01-05 23:40:29] 
+❌ Error processing sample 1: 
+[2026-01-05 23:40:29] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 196, in retrieve_similar_samples
+    similarities, indices = self.compute_similarity(query_embedding, top_k=rag_top_m_samples)
+                            ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/China_Journal/model/RAG.py", line 163, in compute_similarity
+    similarities, indices = self.faiss_index.search(
+                            ~~~~~~~~~~~~~~~~~~~~~~~^
+        query_embedding.astype('float32'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        top_k
+        ^^^^^
+    )
+    ^
+  File "/root/miniconda3/lib/python3.13/site-packages/faiss/class_wrappers.py", line 383, in replacement_search
+    assert d == self.d
+           ^^^^^^^^^^^
+AssertionError
+
+[2026-01-05 23:40:29] 
+================================================================================
+[2026-01-05 23:40:29] DEBUGGING SAMPLE 3
+[2026-01-05 23:40:29] ================================================================================
+[2026-01-05 23:40:29] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 23:40:29]   1. Location 804 at 20220708 20:30
+[2026-01-05 23:40:29]   2. Location 804 at 20220709 03:30
+[2026-01-05 23:40:29]   3. Location 1216 at 20220711 05:30
+[2026-01-05 23:40:29]   4. Location 1216 at 20220713 20:30
+[2026-01-05 23:40:29]   5. Location 1176 at 20220715 08:30
+[2026-01-05 23:40:29]   6. Location 1176 at 20220716 07:30
+[2026-01-05 23:40:29]   7. Location 1176 at 20220719 00:30
+[2026-01-05 23:40:29]   8. Location 1176 at 20220720 10:00
+[2026-01-05 23:40:29]   9. Location 1176 at 20220721 02:00
+[2026-01-05 23:40:29]   10. Location 1176 at 20220721 06:00
+[2026-01-05 23:40:29]   11. Location 1176 at 20220721 20:30
+[2026-01-05 23:40:29]   12. Location 1216 at 20220723 16:00
+[2026-01-05 23:40:29] 
+📍 Current Location: Grid 1216
+[2026-01-05 23:40:29] 🎯 Ground Truth Next Location: Grid 1216
+[2026-01-05 23:40:29] 
+--------------------------------------------------------------------------------
+[2026-01-05 23:40:29] STAGE 1: RAG RETRIEVAL
+[2026-01-05 23:40:30] --------------------------------------------------------------------------------
+[2026-01-05 23:40:30] 
+❌ Error processing sample 2: 
+[2026-01-05 23:40:30] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 196, in retrieve_similar_samples
+    similarities, indices = self.compute_similarity(query_embedding, top_k=rag_top_m_samples)
+                            ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/China_Journal/model/RAG.py", line 163, in compute_similarity
+    similarities, indices = self.faiss_index.search(
+                            ~~~~~~~~~~~~~~~~~~~~~~~^
+        query_embedding.astype('float32'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        top_k
+        ^^^^^
+    )
+    ^
+  File "/root/miniconda3/lib/python3.13/site-packages/faiss/class_wrappers.py", line 383, in replacement_search
+    assert d == self.d
+           ^^^^^^^^^^^
+AssertionError
+
+[2026-01-05 23:40:30] 
+================================================================================
+[2026-01-05 23:40:30] DEBUGGING SAMPLE 4
+[2026-01-05 23:40:30] ================================================================================
+[2026-01-05 23:40:30] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 23:40:30]   1. Location 804 at 20220709 03:30
+[2026-01-05 23:40:30]   2. Location 1216 at 20220711 05:30
+[2026-01-05 23:40:30]   3. Location 1216 at 20220713 20:30
+[2026-01-05 23:40:30]   4. Location 1176 at 20220715 08:30
+[2026-01-05 23:40:30]   5. Location 1176 at 20220716 07:30
+[2026-01-05 23:40:30]   6. Location 1176 at 20220719 00:30
+[2026-01-05 23:40:30]   7. Location 1176 at 20220720 10:00
+[2026-01-05 23:40:30]   8. Location 1176 at 20220721 02:00
+[2026-01-05 23:40:30]   9. Location 1176 at 20220721 06:00
+[2026-01-05 23:40:30]   10. Location 1176 at 20220721 20:30
+[2026-01-05 23:40:30]   11. Location 1216 at 20220723 16:00
+[2026-01-05 23:40:30]   12. Location 1216 at 20220724 13:30
+[2026-01-05 23:40:30] 
+📍 Current Location: Grid 1216
+[2026-01-05 23:40:30] 🎯 Ground Truth Next Location: Grid 1216
+[2026-01-05 23:40:30] 
+--------------------------------------------------------------------------------
+[2026-01-05 23:40:30] STAGE 1: RAG RETRIEVAL
+[2026-01-05 23:40:30] --------------------------------------------------------------------------------
+[2026-01-05 23:40:30] 
+❌ Error processing sample 3: 
+[2026-01-05 23:40:30] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 196, in retrieve_similar_samples
+    similarities, indices = self.compute_similarity(query_embedding, top_k=rag_top_m_samples)
+                            ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/China_Journal/model/RAG.py", line 163, in compute_similarity
+    similarities, indices = self.faiss_index.search(
+                            ~~~~~~~~~~~~~~~~~~~~~~~^
+        query_embedding.astype('float32'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        top_k
+        ^^^^^
+    )
+    ^
+  File "/root/miniconda3/lib/python3.13/site-packages/faiss/class_wrappers.py", line 383, in replacement_search
+    assert d == self.d
+           ^^^^^^^^^^^
+AssertionError
+
+[2026-01-05 23:40:30] 
+================================================================================
+[2026-01-05 23:40:30] DEBUGGING SAMPLE 5
+[2026-01-05 23:40:30] ================================================================================
+[2026-01-05 23:40:30] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 23:40:30]   1. Location 1216 at 20220711 05:30
+[2026-01-05 23:40:30]   2. Location 1216 at 20220713 20:30
+[2026-01-05 23:40:30]   3. Location 1176 at 20220715 08:30
+[2026-01-05 23:40:30]   4. Location 1176 at 20220716 07:30
+[2026-01-05 23:40:30]   5. Location 1176 at 20220719 00:30
+[2026-01-05 23:40:30]   6. Location 1176 at 20220720 10:00
+[2026-01-05 23:40:30]   7. Location 1176 at 20220721 02:00
+[2026-01-05 23:40:30]   8. Location 1176 at 20220721 06:00
+[2026-01-05 23:40:30]   9. Location 1176 at 20220721 20:30
+[2026-01-05 23:40:30]   10. Location 1216 at 20220723 16:00
+[2026-01-05 23:40:30]   11. Location 1216 at 20220724 13:30
+[2026-01-05 23:40:30]   12. Location 1216 at 20220725 12:30
+[2026-01-05 23:40:30] 
+📍 Current Location: Grid 1216
+[2026-01-05 23:40:30] 🎯 Ground Truth Next Location: Grid 1216
+[2026-01-05 23:40:30] 
+--------------------------------------------------------------------------------
+[2026-01-05 23:40:30] STAGE 1: RAG RETRIEVAL
+[2026-01-05 23:40:30] --------------------------------------------------------------------------------
+[2026-01-05 23:40:30] 
+❌ Error processing sample 4: 
+[2026-01-05 23:40:30] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 196, in retrieve_similar_samples
+    similarities, indices = self.compute_similarity(query_embedding, top_k=rag_top_m_samples)
+                            ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/China_Journal/model/RAG.py", line 163, in compute_similarity
+    similarities, indices = self.faiss_index.search(
+                            ~~~~~~~~~~~~~~~~~~~~~~~^
+        query_embedding.astype('float32'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        top_k
+        ^^^^^
+    )
+    ^
+  File "/root/miniconda3/lib/python3.13/site-packages/faiss/class_wrappers.py", line 383, in replacement_search
+    assert d == self.d
+           ^^^^^^^^^^^
+AssertionError
+
+[2026-01-05 23:40:30] 
+================================================================================
+[2026-01-05 23:40:30] DEBUGGING SAMPLE 6
+[2026-01-05 23:40:30] ================================================================================
+[2026-01-05 23:40:30] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 23:40:30]   1. Location 1216 at 20220713 20:30
+[2026-01-05 23:40:30]   2. Location 1176 at 20220715 08:30
+[2026-01-05 23:40:30]   3. Location 1176 at 20220716 07:30
+[2026-01-05 23:40:30]   4. Location 1176 at 20220719 00:30
+[2026-01-05 23:40:30]   5. Location 1176 at 20220720 10:00
+[2026-01-05 23:40:30]   6. Location 1176 at 20220721 02:00
+[2026-01-05 23:40:30]   7. Location 1176 at 20220721 06:00
+[2026-01-05 23:40:30]   8. Location 1176 at 20220721 20:30
+[2026-01-05 23:40:30]   9. Location 1216 at 20220723 16:00
+[2026-01-05 23:40:30]   10. Location 1216 at 20220724 13:30
+[2026-01-05 23:40:30]   11. Location 1216 at 20220725 12:30
+[2026-01-05 23:40:30]   12. Location 1216 at 20220726 05:00
+[2026-01-05 23:40:30] 
+📍 Current Location: Grid 1216
+[2026-01-05 23:40:30] 🎯 Ground Truth Next Location: Grid 1136
+[2026-01-05 23:40:30] 
+--------------------------------------------------------------------------------
+[2026-01-05 23:40:30] STAGE 1: RAG RETRIEVAL
+[2026-01-05 23:40:30] --------------------------------------------------------------------------------
+[2026-01-05 23:40:30] 
+❌ Error processing sample 5: 
+[2026-01-05 23:40:30] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 196, in retrieve_similar_samples
+    similarities, indices = self.compute_similarity(query_embedding, top_k=rag_top_m_samples)
+                            ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/China_Journal/model/RAG.py", line 163, in compute_similarity
+    similarities, indices = self.faiss_index.search(
+                            ~~~~~~~~~~~~~~~~~~~~~~~^
+        query_embedding.astype('float32'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        top_k
+        ^^^^^
+    )
+    ^
+  File "/root/miniconda3/lib/python3.13/site-packages/faiss/class_wrappers.py", line 383, in replacement_search
+    assert d == self.d
+           ^^^^^^^^^^^
+AssertionError
+
+[2026-01-05 23:40:30] 
+================================================================================
+[2026-01-05 23:40:30] DEBUGGING SAMPLE 7
+[2026-01-05 23:40:30] ================================================================================
+[2026-01-05 23:40:30] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 23:40:30]   1. Location 1176 at 20220715 08:30
+[2026-01-05 23:40:30]   2. Location 1176 at 20220716 07:30
+[2026-01-05 23:40:30]   3. Location 1176 at 20220719 00:30
+[2026-01-05 23:40:30]   4. Location 1176 at 20220720 10:00
+[2026-01-05 23:40:30]   5. Location 1176 at 20220721 02:00
+[2026-01-05 23:40:30]   6. Location 1176 at 20220721 06:00
+[2026-01-05 23:40:30]   7. Location 1176 at 20220721 20:30
+[2026-01-05 23:40:30]   8. Location 1216 at 20220723 16:00
+[2026-01-05 23:40:30]   9. Location 1216 at 20220724 13:30
+[2026-01-05 23:40:30]   10. Location 1216 at 20220725 12:30
+[2026-01-05 23:40:30]   11. Location 1216 at 20220726 05:00
+[2026-01-05 23:40:30]   12. Location 1136 at 20220727 01:30
+[2026-01-05 23:40:30] 
+📍 Current Location: Grid 1136
+[2026-01-05 23:40:30] 🎯 Ground Truth Next Location: Grid 465
+[2026-01-05 23:40:30] 
+--------------------------------------------------------------------------------
+[2026-01-05 23:40:30] STAGE 1: RAG RETRIEVAL
+[2026-01-05 23:40:30] --------------------------------------------------------------------------------
+[2026-01-05 23:40:30] 
+❌ Error processing sample 6: 
+[2026-01-05 23:40:30] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 196, in retrieve_similar_samples
+    similarities, indices = self.compute_similarity(query_embedding, top_k=rag_top_m_samples)
+                            ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/China_Journal/model/RAG.py", line 163, in compute_similarity
+    similarities, indices = self.faiss_index.search(
+                            ~~~~~~~~~~~~~~~~~~~~~~~^
+        query_embedding.astype('float32'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        top_k
+        ^^^^^
+    )
+    ^
+  File "/root/miniconda3/lib/python3.13/site-packages/faiss/class_wrappers.py", line 383, in replacement_search
+    assert d == self.d
+           ^^^^^^^^^^^
+AssertionError
+
+[2026-01-05 23:40:30] 
+================================================================================
+[2026-01-05 23:40:30] DEBUGGING SAMPLE 8
+[2026-01-05 23:40:30] ================================================================================
+[2026-01-05 23:40:30] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 23:40:30]   1. Location 1176 at 20220716 07:30
+[2026-01-05 23:40:30]   2. Location 1176 at 20220719 00:30
+[2026-01-05 23:40:30]   3. Location 1176 at 20220720 10:00
+[2026-01-05 23:40:30]   4. Location 1176 at 20220721 02:00
+[2026-01-05 23:40:30]   5. Location 1176 at 20220721 06:00
+[2026-01-05 23:40:30]   6. Location 1176 at 20220721 20:30
+[2026-01-05 23:40:30]   7. Location 1216 at 20220723 16:00
+[2026-01-05 23:40:30]   8. Location 1216 at 20220724 13:30
+[2026-01-05 23:40:30]   9. Location 1216 at 20220725 12:30
+[2026-01-05 23:40:30]   10. Location 1216 at 20220726 05:00
+[2026-01-05 23:40:30]   11. Location 1136 at 20220727 01:30
+[2026-01-05 23:40:30]   12. Location 465 at 20220729 07:00
+[2026-01-05 23:40:30] 
+📍 Current Location: Grid 465
+[2026-01-05 23:40:30] 🎯 Ground Truth Next Location: Grid 975
+[2026-01-05 23:40:30] 
+--------------------------------------------------------------------------------
+[2026-01-05 23:40:30] STAGE 1: RAG RETRIEVAL
+[2026-01-05 23:40:30] --------------------------------------------------------------------------------
+[2026-01-05 23:40:30] 
+❌ Error processing sample 7: 
+[2026-01-05 23:40:30] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 196, in retrieve_similar_samples
+    similarities, indices = self.compute_similarity(query_embedding, top_k=rag_top_m_samples)
+                            ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/China_Journal/model/RAG.py", line 163, in compute_similarity
+    similarities, indices = self.faiss_index.search(
+                            ~~~~~~~~~~~~~~~~~~~~~~~^
+        query_embedding.astype('float32'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        top_k
+        ^^^^^
+    )
+    ^
+  File "/root/miniconda3/lib/python3.13/site-packages/faiss/class_wrappers.py", line 383, in replacement_search
+    assert d == self.d
+           ^^^^^^^^^^^
+AssertionError
+
+[2026-01-05 23:40:30] 
+================================================================================
+[2026-01-05 23:40:30] DEBUGGING SAMPLE 9
+[2026-01-05 23:40:30] ================================================================================
+[2026-01-05 23:40:30] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 23:40:30]   1. Location 1176 at 20220719 00:30
+[2026-01-05 23:40:30]   2. Location 1176 at 20220720 10:00
+[2026-01-05 23:40:30]   3. Location 1176 at 20220721 02:00
+[2026-01-05 23:40:30]   4. Location 1176 at 20220721 06:00
+[2026-01-05 23:40:30]   5. Location 1176 at 20220721 20:30
+[2026-01-05 23:40:30]   6. Location 1216 at 20220723 16:00
+[2026-01-05 23:40:30]   7. Location 1216 at 20220724 13:30
+[2026-01-05 23:40:30]   8. Location 1216 at 20220725 12:30
+[2026-01-05 23:40:30]   9. Location 1216 at 20220726 05:00
+[2026-01-05 23:40:30]   10. Location 1136 at 20220727 01:30
+[2026-01-05 23:40:30]   11. Location 465 at 20220729 07:00
+[2026-01-05 23:40:30]   12. Location 975 at 20220801 03:00
+[2026-01-05 23:40:30] 
+📍 Current Location: Grid 975
+[2026-01-05 23:40:30] 🎯 Ground Truth Next Location: Grid 1298
+[2026-01-05 23:40:30] 
+--------------------------------------------------------------------------------
+[2026-01-05 23:40:30] STAGE 1: RAG RETRIEVAL
+[2026-01-05 23:40:30] --------------------------------------------------------------------------------
+[2026-01-05 23:40:30] 
+❌ Error processing sample 8: 
+[2026-01-05 23:40:30] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 196, in retrieve_similar_samples
+    similarities, indices = self.compute_similarity(query_embedding, top_k=rag_top_m_samples)
+                            ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/China_Journal/model/RAG.py", line 163, in compute_similarity
+    similarities, indices = self.faiss_index.search(
+                            ~~~~~~~~~~~~~~~~~~~~~~~^
+        query_embedding.astype('float32'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        top_k
+        ^^^^^
+    )
+    ^
+  File "/root/miniconda3/lib/python3.13/site-packages/faiss/class_wrappers.py", line 383, in replacement_search
+    assert d == self.d
+           ^^^^^^^^^^^
+AssertionError
+
+[2026-01-05 23:40:30] 
+================================================================================
+[2026-01-05 23:40:30] DEBUGGING SAMPLE 10
+[2026-01-05 23:40:30] ================================================================================
+[2026-01-05 23:40:30] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 23:40:30]   1. Location 1176 at 20220720 10:00
+[2026-01-05 23:40:30]   2. Location 1176 at 20220721 02:00
+[2026-01-05 23:40:30]   3. Location 1176 at 20220721 06:00
+[2026-01-05 23:40:30]   4. Location 1176 at 20220721 20:30
+[2026-01-05 23:40:30]   5. Location 1216 at 20220723 16:00
+[2026-01-05 23:40:30]   6. Location 1216 at 20220724 13:30
+[2026-01-05 23:40:30]   7. Location 1216 at 20220725 12:30
+[2026-01-05 23:40:30]   8. Location 1216 at 20220726 05:00
+[2026-01-05 23:40:30]   9. Location 1136 at 20220727 01:30
+[2026-01-05 23:40:30]   10. Location 465 at 20220729 07:00
+[2026-01-05 23:40:30]   11. Location 975 at 20220801 03:00
+[2026-01-05 23:40:30]   12. Location 1298 at 20220802 06:30
+[2026-01-05 23:40:30] 
+📍 Current Location: Grid 1298
+[2026-01-05 23:40:30] 🎯 Ground Truth Next Location: Grid 1216
+[2026-01-05 23:40:30] 
+--------------------------------------------------------------------------------
+[2026-01-05 23:40:30] STAGE 1: RAG RETRIEVAL
+[2026-01-05 23:40:30] --------------------------------------------------------------------------------
+[2026-01-05 23:40:30] 
+❌ Error processing sample 9: 
+[2026-01-05 23:40:30] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 196, in retrieve_similar_samples
+    similarities, indices = self.compute_similarity(query_embedding, top_k=rag_top_m_samples)
+                            ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/China_Journal/model/RAG.py", line 163, in compute_similarity
+    similarities, indices = self.faiss_index.search(
+                            ~~~~~~~~~~~~~~~~~~~~~~~^
+        query_embedding.astype('float32'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        top_k
+        ^^^^^
+    )
+    ^
+  File "/root/miniconda3/lib/python3.13/site-packages/faiss/class_wrappers.py", line 383, in replacement_search
+    assert d == self.d
+           ^^^^^^^^^^^
+AssertionError
+
+[2026-01-05 23:40:30] 
+================================================================================
+[2026-01-05 23:40:30] OVERALL TEST RESULTS
+[2026-01-05 23:40:30] ================================================================================
+[2026-01-05 23:40:30] 
+================================================================================
+[2026-01-05 23:40:30] DETAILED TESTING COMPLETED
+[2026-01-05 23:40:30] ================================================================================
