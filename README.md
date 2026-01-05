@@ -571,3 +571,32 @@ Rules:
 ---
 
 
+
+# 代码精简优化
+# Prompt_6.1[代码精简优化]
+## 背景
+现在我已经完成了整个mobility prediction模型的训练流程，并且进行了测试。但是我觉得现在model模块的代码，特别是RAG.py,LLM.py,Gravity.py和Predictor.py脚本中，有一些重复的代码和不必要的复杂逻辑。我希望能够对这些代码进行精简和优化，使其更加简洁、高效和易于维护。很多包括了没有必要的布尔参数以及老版本遗留下来的选项接口。这样严重影响了代码的可读性和维护性。我希望你能帮我对这些代码进行精简和优化，去掉不必要的部分，保留核心功能。例如：
+config中不需要保留的参数：
+data:max_train_samples, max_val_samples, max_test_samples,我已经精细划分了数据集了，直接默认跑全部的sample；Poi_data_path默认是在data/{city}/poi.csv，没有必要额外输入参数或者在代码中去判断。
+llm:这个部分的参数都保留
+rag: use_fasis默认就是true,similarity_metrics就默认是"cosine"，，没有必要额外输入参数或者在代码中去判断。
+gravity: include_current默认就是true，没有必要额外输入参数或者在代码中去判断。
+## 任务
+请完成以下任务：
+1. **代码精简优化**：
+   - 修改RAG.py,LLM.py,Gravity.py和Predictor.py，脚本，去掉不必要的重复代码和复杂逻辑。
+   - 去掉不必要的布尔参数和老版本遗留下来的选项接口，保留核心功能。
+   - 确保修改后的代码更加简洁、高效和易于维护。
+   - 相应更新trainer.py和util.py中的调用部分，确保能够正确调用修改后的模块。
+2. **测试修改**：
+   - 测试修改后的RAG.py,LLM.py,Gravity.py和Predictor.py脚本，确保功能正常，性能提升。
+## 约束
+- 使用Python编程语言。
+- 不修改原来的任何逻辑，十分重要！！
+- 确保trainer.py和util.py中的调用部分能够正确调用修改后的模块。训练流程一定可以跑通！！！
+- 千万不要修改prompt设计！！
+- 不要修改LLM response中解析出json的代码！！
+## 输出格式
+- 提交修改后的RAG.py,LLM.py,Gravity.py和Predictor.py脚本文件。
+- 提交修改后的trainer.py和util.py脚本文件。
+---
