@@ -203,18 +203,6 @@ class MobilityPredictor:
         
         candidate_list = sorted(list(all_candidates))
         
-        prompt = """You must follow these rules:
-- Do NOT explain.
-- Do NOT think aloud.
-- Do NOT output anything except the answer.
-- The answer MUST be enclosed in <answer></answer>.
-
-Question:
-What is the capital of France?
-
-Output format:
-<answer>Paris</answer>
-"""
 
         # Tokenize prompt
         inputs = self.llm.tokenizer(
@@ -231,7 +219,7 @@ Output format:
             with torch.no_grad():
                 outputs = self.llm.model.generate(
                     **inputs,
-                    max_new_tokens=512,
+                    max_new_tokens=256,
                     num_beams=self.top_k_predictions,
                     num_return_sequences=self.top_k_predictions,
                     do_sample=True,  # Enable sampling within beam search
@@ -437,8 +425,18 @@ Output format:
         """
         
         current_location = observation_trajectory[-1]['location_id']
-        
-        prompt = f"## Task\n"
+
+        prompt = f"""You must follow these rules:
+- Do NOT explain.
+- Do NOT think aloud.
+- Do NOT output anything except the answer.
+- Output the answer in a JSON format.
+- Output format:
+{{
+  "Grid": <number>
+}}
+"""
+        prompt += f"## Your Task\n"
         prompt += f"You are a mobility prediction expert analyzing human mobility patterns.\n"
         prompt += f"The user may stay at Grid {current_location} or move to a new location.\n"
         prompt += f"Predict the next most likely location based on the following information:\n\n"
@@ -458,10 +456,6 @@ Output format:
         prompt += "(Current location included as a candidate for stationary behavior)\n\n"
         compact_candidates = self._format_candidates_compact(candidates_by_category, current_location)
         prompt += compact_candidates + "\n"
-                
-        prompt += f"Output format: Grid [ID]\n"
-        prompt += f"Output only the grid ID, no explanation.\n"
-        prompt += "Answer directly without showing your reasoning process."
 
         return prompt
     
