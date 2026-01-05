@@ -80,11 +80,9 @@ class RAGDatabaseBuilder:
         
         print(f"LLM initialized: {llm_config['model_name']}")
         
-        # Load POI data
+        # Load POI data (always use default path)
         data_config = config['data']
-        poi_path = data_config.get('poi_data_path')
-        if poi_path is None:
-            poi_path = f"/workspace/China_Journal/data/{city}/poi.csv"
+        poi_path = f"/workspace/China_Journal/data/{city}/poi.csv"
         
         print(f"Loading POI data from: {poi_path}")
         self.poi_data = self._load_poi_data(poi_path)

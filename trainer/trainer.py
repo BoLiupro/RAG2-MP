@@ -87,10 +87,7 @@ class MobilityTrainer:
             city=self.config['data']['city'],
             data_dir=self.config['data']['data_dir'],
             obs_len=self.config['data']['obs_len'],
-            pred_len=self.config['data']['pred_len'],
-            max_train_samples=self.config['data'].get('max_train_samples', None),
-            max_val_samples=self.config['data'].get('max_val_samples', None),
-            max_test_samples=self.config['data'].get('max_test_samples', None)
+            pred_len=self.config['data']['pred_len']
         )
         
         self.log(f"Train samples: {len(self.train_dataset)}")

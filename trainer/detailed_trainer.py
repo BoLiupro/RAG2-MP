@@ -85,16 +85,18 @@ class DetailedMobilityTrainer:
         """Load a small subset of data for debugging."""
         self.log("Loading datasets...")
         
-        # Use small subsets for quick debugging
+        # Load all datasets
         self.train_dataset, self.val_dataset, self.test_dataset = load_datasets(
             city=self.config['data']['city'],
             data_dir=self.config['data']['data_dir'],
             obs_len=self.config['data']['obs_len'],
-            pred_len=self.config['data']['pred_len'],
-            max_train_samples=self.num_debug_samples,
-            max_val_samples=self.num_debug_samples,
-            max_test_samples=self.num_debug_samples
+            pred_len=self.config['data']['pred_len']
         )
+        
+        # Use small subsets for debugging by slicing
+        self.train_dataset.samples = self.train_dataset.samples[:self.num_debug_samples]
+        self.val_dataset.samples = self.val_dataset.samples[:self.num_debug_samples]
+        self.test_dataset.samples = self.test_dataset.samples[:self.num_debug_samples]
         
         self.log(f"Train samples: {len(self.train_dataset)}")
         self.log(f"Validation samples: {len(self.val_dataset)}")
@@ -213,8 +215,7 @@ class DetailedMobilityTrainer:
         
         candidates_by_category = self.predictor.gravity.get_candidate_locations(
             current_grid_id=current_location,
-            return_scores=True,
-            include_current=True
+            return_scores=True
         )
         
         if self.print_gravity_candidates:

@@ -168,21 +168,19 @@ class GravityModel:
     def get_candidate_locations(
         self,
         current_grid_id: int,
-        return_scores: bool = False,
-        include_current: bool = True
+        return_scores: bool = False
     ) -> Dict[str, List]:
         """
         Get candidate locations for each POI category using the gravity model.
         
         For each POI category, calculates gravity scores for all grids within radius,
         then returns the top-n grids with highest scores.
-        Optionally includes the current location as a candidate (for stationary behavior).
+        Always includes the current location as a candidate (for stationary behavior).
         
         Args:
             current_grid_id: Current location grid ID
             return_scores: If True, return tuples of (grid_id, score); 
                           If False, return only grid_ids
-            include_current: If True, always include current location as a candidate
         
         Returns:
             Dictionary mapping POI category to list of top-n candidates
@@ -210,27 +208,23 @@ class GravityModel:
             # Sort by score (descending)
             scores.sort(key=lambda x: x[1], reverse=True)
             
-            # Select top-n candidates
-            if include_current:
-                # Ensure current location is included
-                top_candidates = []
-                current_included = False
-                
-                for grid_id, score in scores:
-                    if grid_id == current_grid_id:
-                        current_included = True
-                    top_candidates.append((grid_id, score))
-                    if len(top_candidates) >= self.gravity_top_n_candidates:
-                        break
-                
-                # If current location wasn't in top-n, add it
-                if not current_included:
-                    current_score = self._calculate_gravity_score(
-                        current_grid_id, current_grid_id, poi_category
-                    )
-                    top_candidates.append((current_grid_id, current_score))
-            else:
-                top_candidates = scores[:self.gravity_top_n_candidates]
+            # Always ensure current location is included
+            top_candidates = []
+            current_included = False
+            
+            for grid_id, score in scores:
+                if grid_id == current_grid_id:
+                    current_included = True
+                top_candidates.append((grid_id, score))
+                if len(top_candidates) >= self.gravity_top_n_candidates:
+                    break
+            
+            # If current location wasn't in top-n, add it
+            if not current_included:
+                current_score = self._calculate_gravity_score(
+                    current_grid_id, current_grid_id, poi_category
+                )
+                top_candidates.append((current_grid_id, current_score))
             
             if return_scores:
                 candidates[poi_category] = top_candidates

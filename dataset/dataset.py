@@ -22,7 +22,6 @@ class MobilityDataset(Dataset):
         city: str,
         obs_len: int = 12,
         pred_len: int = 1,
-        max_samples: int = None,
         poi_data_path: str = None
     ):
         """
@@ -33,14 +32,12 @@ class MobilityDataset(Dataset):
             city: City name ('beijing', 'shenzhen', 'nanchang')
             obs_len: Length of observation trajectory
             pred_len: Length of prediction trajectory
-            max_samples: Maximum number of samples to load (None = all)
             poi_data_path: Path to POI data CSV file
         """
         self.data_path = data_path
         self.city = city
         self.obs_len = obs_len
         self.pred_len = pred_len
-        self.max_samples = max_samples
         
         # Load POI data if provided
         self.poi_data = None
@@ -127,13 +124,6 @@ class MobilityDataset(Dataset):
                 }
                 
                 samples.append(sample)
-                
-                # Check max_samples limit
-                if self.max_samples and len(samples) >= self.max_samples:
-                    break
-            
-            if self.max_samples and len(samples) >= self.max_samples:
-                break
         
         return samples
     
@@ -225,10 +215,7 @@ def load_datasets(
     city: str,
     data_dir: str = "/workspace/China_Journal/data",
     obs_len: int = 12,
-    pred_len: int = 1,
-    max_train_samples: int = None,
-    max_val_samples: int = None,
-    max_test_samples: int = None
+    pred_len: int = 1
 ) -> Tuple[MobilityDataset, MobilityDataset, MobilityDataset]:
     """
     Load train, validation, and test datasets for a city.
@@ -238,9 +225,6 @@ def load_datasets(
         data_dir: Base directory containing city data
         obs_len: Observation length
         pred_len: Prediction length
-        max_train_samples: Max training samples (None = all)
-        max_val_samples: Max validation samples (None = all)
-        max_test_samples: Max test samples (None = all)
     
     Returns:
         Tuple of (train_dataset, val_dataset, test_dataset)
@@ -259,7 +243,6 @@ def load_datasets(
         city=city,
         obs_len=obs_len,
         pred_len=pred_len,
-        max_samples=max_train_samples,
         poi_data_path=poi_path
     )
     
@@ -268,7 +251,6 @@ def load_datasets(
         city=city,
         obs_len=obs_len,
         pred_len=pred_len,
-        max_samples=max_val_samples,
         poi_data_path=poi_path
     )
     
@@ -277,7 +259,6 @@ def load_datasets(
         city=city,
         obs_len=obs_len,
         pred_len=pred_len,
-        max_samples=max_test_samples,
         poi_data_path=poi_path
     )
     

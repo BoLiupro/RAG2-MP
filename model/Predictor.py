@@ -29,7 +29,6 @@ class MobilityPredictor:
         llm_model_name: str = "Deepseek-R1-Distill-Qwen-3B",
         llm_model_path: str = "/datadisk",
         rag_database_path: str = "/workspace/China_Journal/util/rag_database",
-        poi_data_path: str = None,
         city: str = "beijing",
         top_k_predictions: int = 5,
         rag_top_m_samples: int = 5,
@@ -47,7 +46,6 @@ class MobilityPredictor:
             llm_model_name: Name of the LLM model
             llm_model_path: Path to the LLM model directory
             rag_database_path: Path to RAG database
-            poi_data_path: Path to POI data CSV file
             city: City name
             top_k_predictions: Number of top predictions to return
             rag_top_m_samples: Number of similar samples to retrieve (RAG)
@@ -87,9 +85,8 @@ class MobilityPredictor:
         # Load RAG database
         self.rag.load_rag_database()
         
-        # Set POI data path
-        if poi_data_path is None:
-            poi_data_path = f"/workspace/China_Journal/data/{city}/poi.csv"
+        # POI data path is always data/{city}/poi.csv
+        poi_data_path = f"/workspace/China_Journal/data/{city}/poi.csv"
         
         # Load POI data for RAG
         self.rag.load_poi_data(poi_data_path)
@@ -140,8 +137,7 @@ class MobilityPredictor:
         # Step 2: Get candidate locations from Gravity Model
         candidates_by_category = self.gravity.get_candidate_locations(
             current_grid_id=current_location,
-            return_scores=True,
-            include_current=True  # Include current location for stationary behavior
+            return_scores=True
         )
         
         # Step 3: Make final prediction using LLM generation

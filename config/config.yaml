@@ -11,14 +11,6 @@ data:
   # Trajectory parameters
   obs_len: 12  # Observation trajectory length (number of historical locations)
   pred_len: 1  # Prediction trajectory length (typically 1 for next location)
-  
-  # Sample limits (set to null for using all available data)
-  max_train_samples: 1000  # Maximum training samples
-  max_val_samples: 200  # Maximum validation samples
-  max_test_samples: 200  # Maximum test samples
-  
-  # POI data path (automatically set if null)
-  poi_data_path: null  # Path to POI CSV file (e.g., beijing_grid_poi.csv)
 
 # ============================================================================
 # Model Configuration
@@ -54,10 +46,6 @@ model:
     top_m_samples: 5  # Number of similar historical samples to retrieve
     database_path: "/workspace/China_Journal/util/rag_database"  # RAG database directory
     max_summary_length: 256  # Maximum summary length in tokens
-    
-    # Retrieval parameters
-    similarity_metric: "cosine"  # Similarity metric: cosine, euclidean
-    use_faiss: true  # Use FAISS for efficient similarity search
   
   # ---------------------------------------------------------------------------
   # Gravity Model Configuration
@@ -67,7 +55,6 @@ model:
     weight: 1.0  # Weight parameter in gravity formula: score = weight * POI_count / distance^2
     radius: 5  # Search radius in grid units
     grid_size: 40  # Grid system size (40x40 = 1600 grids)
-    include_current: true  # Include current location in candidates (for stationary behavior)
   
   # ---------------------------------------------------------------------------
   # Prediction Configuration
