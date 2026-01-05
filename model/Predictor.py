@@ -220,6 +220,7 @@ class MobilityPredictor:
                     max_new_tokens=20,
                     num_beams=self.top_k_predictions,
                     num_return_sequences=self.top_k_predictions,
+                    diversity_penalty=1.0,
                     early_stopping=True,
                     pad_token_id=self.llm.tokenizer.pad_token_id,
                     eos_token_id=self.llm.tokenizer.eos_token_id
