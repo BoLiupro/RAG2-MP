@@ -370,7 +370,7 @@ class MobilityPredictor:
             
             # Format all candidates for this category on a single line
             candidate_strs = []
-            for grid_id, score in candidates[:5]:  # Top 5 per category
+            for grid_id, score in candidates[:self.gravity_top_n_candidates]:  # Strictly limit by config
                 dist = calculate_grid_distance(current_location, grid_id, self.city, 40)
                 candidate_strs.append(f"Grid {grid_id}, {score:.1f}, {dist:.2f}km")
             
@@ -420,13 +420,10 @@ class MobilityPredictor:
         Returns:
             Formatted prompt string
         """
-        # Determine mobility mode
-        from util.utils import get_mobility_mode
-        mobility_mode = get_mobility_mode(self.city)
         
         current_location = observation_trajectory[-1]['location_id']
         
-        prompt = f"You are a mobility prediction expert analyzing {mobility_mode} patterns.\n"
+        prompt = f"You are a mobility prediction expert analyzing human mobility patterns.\n"
         prompt += "Note: Trajectories may include both movement and stationary periods.\n"
         prompt += "Predict the next location based on the following information:\n\n"
         
@@ -437,11 +434,11 @@ class MobilityPredictor:
         prompt += compact_traj + "\n\n"
         
         # Add RAG summary
-        prompt += "## Similar Historical Patterns\n"
+        prompt += "## Feature of next location of similar group mobility\n"
         prompt += f"{rag_summary}\n\n"
         
         # Add compact candidate locations
-        prompt += "## Candidate Locations by POI Category\n"
+        prompt += "## Candidate Locations\n"
         prompt += "(Current location included as a candidate for stationary behavior)\n\n"
         compact_candidates = self._format_candidates_compact(candidates_by_category, current_location)
         prompt += compact_candidates + "\n"
@@ -452,7 +449,7 @@ class MobilityPredictor:
         prompt += f"The user may stay at Grid {current_location} or move to a new location.\n\n"
         prompt += f"Output format: Grid [ID]\n"
         prompt += f"Output only the grid ID, no explanation.\n\n"
-        prompt += "Your prediction:"
+        # prompt += "Your prediction:"
         
         return prompt
     

@@ -20,7 +20,7 @@ model:
   # LLM (Large Language Model) Configuration
   # ---------------------------------------------------------------------------
   llm:
-    model_name: "Deepseek-R1-Distill-Qwen-3B"  # LLM model name
+    model_name: "Llama-2-7B"  # LLM model name
     model_path: "/datadisk"  # Base path where LLM models are stored
     
     # Generation parameters
