@@ -305,10 +305,8 @@ class MobilityLLM:
             Generated summary text
         """
         # Build prompt with query and similar samples
-        if city == 'shenzhen':
-            mobility_mode = "private car mobility"
-        else:
-            mobility_mode = "general mobility"
+        from util.utils import get_mobility_mode
+        mobility_mode = get_mobility_mode(city)
         
         prompt = f"You are analyzing {mobility_mode} patterns. "
         prompt += "Given the current trajectory and similar historical patterns, "

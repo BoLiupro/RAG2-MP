@@ -377,9 +377,9 @@ You must respond with ONLY a valid JSON object in this exact format (no addition
 
 {{
   "avg_distance_from_previous_location_km": <number>,
-  "area_type_of_next_location": "<describe poi transitions or poi categories in 2-3 sentences>",
-  "spatial_patterns": "<describe distance trends and area characteristics in 2-3 sentences>",
-  "temporal_patterns": "<describe time patterns in 1-2 sentences, or 'No clear temporal pattern'>"
+  "area_type_of_next_location": "<describe poi transitions or poi categories in 3-4 sentences>",
+  "spatial_patterns": "<describe distance trends and area characteristics in 3-4 sentences>",
+  "temporal_patterns": "<describe time patterns in 2-3 sentences, or 'No clear temporal pattern'>"
 }}"""
         
         if print_prompt:
@@ -749,17 +749,3 @@ You must respond with ONLY a valid JSON object in this exact format (no addition
             'faiss_index_size': self.faiss_index.ntotal if self.faiss_index else 0
         }
         return stats
-    
-    def print_statistics(self):
-        """Print RAG database statistics."""
-        stats = self.get_statistics()
-        print(f"\n{'='*50}")
-        print("RAG Database Statistics")
-        print(f"{'='*50}")
-        print(f"City: {stats['city']}")
-        print(f"Database size: {stats['database_size']} samples")
-        print(f"Embedding dimension: {stats['embedding_dim']}")
-        print(f"RAG Top-M Samples: {stats['rag_top_m_samples']}")
-        print(f"POI locations: {stats['poi_locations']}")
-        print(f"FAISS index size: {stats['faiss_index_size']}")
-        print(f"{'='*50}\n")

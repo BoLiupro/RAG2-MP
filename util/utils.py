@@ -267,10 +267,7 @@ def get_mobility_mode(city: str) -> str:
     Returns:
         Mobility mode description
     """
-    if city.lower() == 'shenzhen':
-        return "private car mobility"
-    else:
-        return "general mobility (may include walking, public transport, taxi, etc.)"
+    return "general mobility (may include walking, public transport, taxi, etc.)"
 
 
 def parse_grid_ids_from_text(text: str) -> List[int]:

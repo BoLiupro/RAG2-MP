@@ -600,3 +600,9 @@ gravity: include_current默认就是true，没有必要额外输入参数或者�
 - 提交修改后的RAG.py,LLM.py,Gravity.py和Predictor.py脚本文件。
 - 提交修改后的trainer.py和util.py脚本文件。
 ---
+# Prompt_6.2[代码精简优化V2]
+## 背景
+现在我已经完成了整个mobility prediction模型的训练流程，并且进行了测试。但是我觉得有的函数没有用到，可以删除。此外，我认为LLM.py中没有必要shenzhen数据集单独分出来一个出行的mode：        if city == 'shenzhen':
+            mobility_mode = "private car mobility"
+        else:
+            mobility_mode = "general mobility"。

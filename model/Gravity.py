@@ -308,17 +308,6 @@ class GravityModel:
         
         return sorted_candidates
     
-    def print_candidates(self, current_grid_id: int):
-        """
-        Print candidate locations for each POI category in a formatted way.
-        
-        Args:
-            current_grid_id: Current location grid ID
-        """
-        # Display method does not print in model code
-        # This method is kept for backwards compatibility but does nothing
-        pass
-    
     def get_statistics(self) -> Dict[str, any]:
         """
         Get statistics about the gravity model configuration.
@@ -336,9 +325,3 @@ class GravityModel:
             'poi_categories': len(self.poi_categories),
             'poi_locations': len(self.poi_data)
         }
-    
-    def print_statistics(self):
-        """Print gravity model statistics."""
-        # Print method does not print in model code
-        # This method is kept for backwards compatibility but does nothing
-        pass
