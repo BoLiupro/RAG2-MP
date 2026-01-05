@@ -60,7 +60,7 @@ model:
   # Prediction Configuration
   # ---------------------------------------------------------------------------
   prediction:
-    top_k_predictions: 5  # Number of top location predictions to return
+    top_k_predictions: 10  # Number of top location predictions to return
 
 # ============================================================================
 # Training Configuration
