@@ -213,21 +213,27 @@ class MobilityPredictor:
         ).to(self.llm.device)
         
         if use_beam_search:
-            # Testing mode: Use beam search for multiple predictions
+            # Testing mode: Use beam search with sampling for diversity
             with torch.no_grad():
                 outputs = self.llm.model.generate(
                     **inputs,
                     max_new_tokens=20,
                     num_beams=self.top_k_predictions,
                     num_return_sequences=self.top_k_predictions,
-                    diversity_penalty=1.0,
+                    do_sample=True,  # Enable sampling within beam search
+                    temperature=1.0,  # Moderate temperature for diversity
+                    top_k=50,
+                    top_p=0.9,
                     early_stopping=True,
+                    no_repeat_ngram_size=2,  # Prevent repeating 2-grams
                     pad_token_id=self.llm.tokenizer.pad_token_id,
                     eos_token_id=self.llm.tokenizer.eos_token_id
                 )
             
-            # Decode all beam search results
+            # Decode all beam outputs
             predictions = []
+            seen_grids = set()
+            
             for i, output in enumerate(outputs):
                 generated_text = self.llm.tokenizer.decode(output, skip_special_tokens=True)
                 
@@ -241,17 +247,21 @@ class MobilityPredictor:
                 grid_id = self._parse_grid_id_from_response(response)
                 
                 if grid_id is not None and 0 <= grid_id < self.num_grids:
-                    # Confidence decreases with beam rank
-                    confidence = 1.0 / (i + 1)
-                    predictions.append((grid_id, confidence))
+                    # Only add if not seen (for diversity)
+                    if grid_id not in seen_grids:
+                        confidence = 1.0 / (len(predictions) + 1)
+                        predictions.append((grid_id, confidence))
+                        seen_grids.add(grid_id)
             
-            # Fill with candidates if needed
-            seen_grids = {grid_id for grid_id, _ in predictions}
-            for grid_id in candidate_list:
-                if grid_id not in seen_grids and len(predictions) < self.top_k_predictions:
-                    confidence = 1.0 / (len(predictions) + 1)
-                    predictions.append((grid_id, confidence))
-                    seen_grids.add(grid_id)
+            # Fill with candidates if we don't have enough unique predictions
+            if len(predictions) < self.top_k_predictions:
+                for grid_id in candidate_list:
+                    if grid_id not in seen_grids:
+                        confidence = 1.0 / (len(predictions) + 1)
+                        predictions.append((grid_id, confidence))
+                        seen_grids.add(grid_id)
+                        if len(predictions) >= self.top_k_predictions:
+                            break
         
         else:
             # Training mode: Greedy generation (single output)

@@ -367,20 +367,23 @@ class MobilityRAG:
         
         # New structured synthesis prompt with enhanced JSON format requirement
         synthesis_prompt = f"""Analyze the following mobility patterns and provide a structured summary in JSON format.
-        Do not give summary for each next location, but a total summary for all.
-        Keep total response under 100 words.
+        Summarize the average distance from previous locations, poi transitions or poi categories of next locations,
+        analyze spatial patterns such as distance trends and area characteristics in 3-4 sentences, 
+        and describe time patterns in 2 sentences, or 'No clear temporal pattern' .
         These are mobility trajectories that are semantically similar to a query trajectory:
 
 {context}
 
-You must respond with ONLY a valid JSON object in this exact format (no additional text, explanations, or markdown):
+Output format (JSON):
 
 {{
   "avg_distance_from_previous_location_km": <number>,
-  "area_type_of_next_location": "<describe poi transitions or poi categories in 3-4 sentences>",
-  "spatial_patterns": "<describe distance trends and area characteristics in 3-4 sentences>",
-  "temporal_patterns": "<describe time patterns in 2-3 sentences, or 'No clear temporal pattern'>"
-}}"""
+  "area_type_of_next_location": "<text>",
+  "spatial_patterns": "<text>",
+  "temporal_patterns": "<text>"
+}}
+Output only json, no explanation.
+"""
         
         if print_prompt:
             print(f"\n{'='*70}")
