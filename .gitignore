@@ -2,5 +2,8 @@ data/
 *.pkl
 *.csv
 *.xlsx
-util/rag_database/
+util/rag_database/beijing
+util/rag_database/shanghai
+util/rag_database/shenzhen
+util/rag_database/nanchang
 /workspace/China_Journal/output/
