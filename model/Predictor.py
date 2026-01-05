@@ -217,7 +217,7 @@ class MobilityPredictor:
             with torch.no_grad():
                 outputs = self.llm.model.generate(
                     **inputs,
-                    max_new_tokens=20,
+                    max_new_tokens=512,
                     num_beams=self.top_k_predictions,
                     num_return_sequences=self.top_k_predictions,
                     do_sample=True,  # Enable sampling within beam search
@@ -262,35 +262,6 @@ class MobilityPredictor:
                         seen_grids.add(grid_id)
                         if len(predictions) >= self.top_k_predictions:
                             break
-        
-        else:
-            # Training mode: Greedy generation (single output)
-            with torch.no_grad():
-                outputs = self.llm.model.generate(
-                    **inputs,
-                    max_new_tokens=20,
-                    num_beams=1,
-                    do_sample=False,
-                    pad_token_id=self.llm.tokenizer.pad_token_id,
-                    eos_token_id=self.llm.tokenizer.eos_token_id
-                )
-            
-            generated_text = self.llm.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            
-            # Extract generated part
-            if generated_text.startswith(prompt):
-                response = generated_text[len(prompt):].strip()
-            else:
-                response = generated_text.strip()
-            
-            # Parse grid_id from response
-            grid_id = self._parse_grid_id_from_response(response)
-            
-            if grid_id is not None and 0 <= grid_id < self.num_grids:
-                predictions = [(grid_id, 1.0)]
-            else:
-                # Fallback to first candidate
-                predictions = [(candidate_list[0], 1.0)] if candidate_list else [(0, 1.0)]
         
         # Return predictions (no logits needed for generation-based approach)
         candidate_list = list(range(self.num_grids))
@@ -375,7 +346,7 @@ class MobilityPredictor:
                                    current_location: int) -> str:
         """
         Format candidate locations in a compact format by category.
-        Format per line: Grid ID, Frequency, Distance, Area Type
+        Each POI category displayed on a single line.
         
         Args:
             candidates_by_category: Dict mapping POI categories to candidate lists
@@ -387,11 +358,7 @@ class MobilityPredictor:
         from util.utils import calculate_grid_distance
         
         formatted_lines = []
-        formatted_lines.append("Format: Grid ID, Attractive Score, Distance from current location, Category")
-        formatted_lines.append("")
-        
-        # Get POI data for area descriptions
-        poi_data = self.rag.poi_data if hasattr(self.rag, 'poi_data') and self.rag.poi_data else {}
+        formatted_lines.append("Format: [Category]: Grid ID, Score, Distance | Grid ID, Score, Distance | ...")
         
         # Convert to list to exclude last category
         category_items = list(candidates_by_category.items())
@@ -401,26 +368,14 @@ class MobilityPredictor:
             # Clean up category name
             category_display = category.replace('_count', '').replace('_', ' ').title()
             
-            formatted_lines.append(f"{category_display}:")
-            
+            # Format all candidates for this category on a single line
+            candidate_strs = []
             for grid_id, score in candidates[:5]:  # Top 5 per category
                 dist = calculate_grid_distance(current_location, grid_id, self.city, 40)
-                
-                # Get area type description
-                area_type = "Mixed"
-                if grid_id in poi_data:
-                    poi_features = poi_data[grid_id]
-                    max_pct = 0
-                    for poi_type, pct in poi_features.items():
-                        if pct > max_pct:
-                            max_pct = pct
-                            area_type = poi_type.replace('_count', '').replace('_', ' ').title()
-                            if max_pct < 20:
-                                area_type = "Mixed"
-                
-                formatted_lines.append(f"  Grid {grid_id}, {score:.1f}, {dist:.2f}km")
+                candidate_strs.append(f"Grid {grid_id}, {score:.1f}, {dist:.2f}km")
             
-            formatted_lines.append("")  # Empty line between categories
+            # Join all candidates with " | " separator
+            formatted_lines.append(f"{category_display}: {' | '.join(candidate_strs)}")
         
         return "\n".join(formatted_lines)
     
