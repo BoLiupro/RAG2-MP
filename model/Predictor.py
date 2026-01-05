@@ -203,14 +203,28 @@ class MobilityPredictor:
         
         candidate_list = sorted(list(all_candidates))
         
+        prompt = """You must follow these rules:
+- Do NOT explain.
+- Do NOT think aloud.
+- Do NOT output anything except the answer.
+- The answer MUST be enclosed in <answer></answer>.
+
+Question:
+What is the capital of France?
+
+Output format:
+<answer>Paris</answer>
+"""
+
         # Tokenize prompt
         inputs = self.llm.tokenizer(
             prompt,
             return_tensors="pt",
             padding=True,
-            truncation=True,
-            max_length=1024
+            truncation=False
+            # max_length=1024
         ).to(self.llm.device)
+
         
         if use_beam_search:
             # Testing mode: Use beam search with sampling for diversity
@@ -225,6 +239,7 @@ class MobilityPredictor:
                     top_k=50,
                     top_p=0.9,
                     early_stopping=True,
+                    repetition_penalty=1.2,
                     no_repeat_ngram_size=2,  # Prevent repeating 2-grams
                     pad_token_id=self.llm.tokenizer.pad_token_id,
                     eos_token_id=self.llm.tokenizer.eos_token_id
@@ -338,7 +353,7 @@ class MobilityPredictor:
                 formatted_parts.append(f"Grid {loc_id} ({area_type})")
             else:
                 dist = calculate_grid_distance(locations[i-1], loc_id, self.city, 40)
-                formatted_parts.append(f"{dist:.2f}km → Grid {loc_id} ({area_type})")
+                formatted_parts.append(f"->{dist:.2f}km->Grid {loc_id} ({area_type})")
         
         return " ".join(formatted_parts)
     
@@ -358,7 +373,7 @@ class MobilityPredictor:
         from util.utils import calculate_grid_distance
         
         formatted_lines = []
-        formatted_lines.append("Format: [Category]: Grid ID, Score, Distance | Grid ID, Score, Distance | ...")
+        formatted_lines.append("Format: [Category]: [Grid ID], [Distance to current location]...")
         
         # Convert to list to exclude last category
         category_items = list(candidates_by_category.items())
@@ -372,7 +387,7 @@ class MobilityPredictor:
             candidate_strs = []
             for grid_id, score in candidates[:self.gravity_top_n_candidates]:  # Strictly limit by config
                 dist = calculate_grid_distance(current_location, grid_id, self.city, 40)
-                candidate_strs.append(f"Grid {grid_id}, {score:.1f}, {dist:.2f}km")
+                candidate_strs.append(f"Grid {grid_id}, {dist:.2f}km")
             
             # Join all candidates with " | " separator
             formatted_lines.append(f"{category_display}: {' | '.join(candidate_strs)}")
@@ -423,9 +438,10 @@ class MobilityPredictor:
         
         current_location = observation_trajectory[-1]['location_id']
         
-        prompt = f"You are a mobility prediction expert analyzing human mobility patterns.\n"
-        prompt += "Note: Trajectories may include both movement and stationary periods.\n"
-        prompt += "Predict the next location based on the following information:\n\n"
+        prompt = f"## Task\n"
+        prompt += f"You are a mobility prediction expert analyzing human mobility patterns.\n"
+        prompt += f"The user may stay at Grid {current_location} or move to a new location.\n"
+        prompt += f"Predict the next most likely location based on the following information:\n\n"
         
         # Add compact trajectory format
         prompt += "## Current Trajectory\n"
@@ -442,15 +458,11 @@ class MobilityPredictor:
         prompt += "(Current location included as a candidate for stationary behavior)\n\n"
         compact_candidates = self._format_candidates_compact(candidates_by_category, current_location)
         prompt += compact_candidates + "\n"
-        
-        # Add prediction instruction
-        prompt += f"## Task\n"
-        prompt += f"Predict the next most likely location based on trajectory patterns, historical behaviors, and candidates.\n"
-        prompt += f"The user may stay at Grid {current_location} or move to a new location.\n\n"
+                
         prompt += f"Output format: Grid [ID]\n"
-        prompt += f"Output only the grid ID, no explanation.\n\n"
-        # prompt += "Your prediction:"
-        
+        prompt += f"Output only the grid ID, no explanation.\n"
+        prompt += "Answer directly without showing your reasoning process."
+
         return prompt
     
     def _parse_predictions_from_response(

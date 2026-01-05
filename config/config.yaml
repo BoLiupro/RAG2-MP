@@ -28,7 +28,7 @@ model:
     temperature: 0.7  # Sampling temperature (higher = more random)
     top_p: 0.9  # Nucleus sampling parameter (cumulative probability)
     top_k: 50  # Top-k sampling parameter (number of top tokens to consider)
-    do_sample: false  # Whether to use sampling (false for greedy decoding)
+    do_sample: true  # Whether to use sampling (false for greedy decoding)
     
     # Model optimization
     use_quantization: true  # Use 4-bit quantization to save memory
