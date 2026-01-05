@@ -1,5 +1,6 @@
-raw_data/
 data/
 *.pkl
+*.csv
+*.xlsx
 util/rag_database/
 /workspace/China_Journal/output/
