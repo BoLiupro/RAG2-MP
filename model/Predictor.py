@@ -321,6 +321,109 @@ class MobilityPredictor:
         
         return None
     
+    def _format_trajectory_compact(self, observation_trajectory: List[Dict[str, Any]]) -> str:
+        """
+        Format trajectory in a compact, structured format.
+        Shows transitions with distances and area types.
+        Format: Grid ID (Area Type) distance → Grid ID (Area Type) distance
+        
+        Args:
+            observation_trajectory: List of trajectory points
+        
+        Returns:
+            Compact formatted trajectory string
+        """
+        if not observation_trajectory:
+            return "Empty trajectory"
+        
+        # Get POI data for area type information
+        poi_data = self.rag.poi_data if hasattr(self.rag, 'poi_data') and self.rag.poi_data else {}
+        
+        formatted_parts = []
+        locations = [p['location_id'] for p in observation_trajectory]
+        
+        # Calculate distances between consecutive locations
+        from util.utils import calculate_grid_distance
+        
+        for i, point in enumerate(observation_trajectory):
+            loc_id = point['location_id']
+            
+            # Get dominant POI type for area description
+            area_type = "Mixed"
+            if loc_id in poi_data:
+                poi_features = poi_data[loc_id]
+                # Find the POI category with highest percentage
+                max_pct = 0
+                for poi_type, pct in poi_features.items():
+                    if pct > max_pct:
+                        max_pct = pct
+                        # Clean up the POI type name
+                        area_type = poi_type.replace('_count', '').replace('_', ' ').title()
+                        if max_pct < 20:  # If no dominant type
+                            area_type = "Mixed"
+            
+            # Calculate distance from previous location
+            if i == 0:
+                formatted_parts.append(f"Grid {loc_id} ({area_type})")
+            else:
+                dist = calculate_grid_distance(locations[i-1], loc_id, self.city, 40)
+                formatted_parts.append(f"{dist:.2f}km → Grid {loc_id} ({area_type})")
+        
+        return " ".join(formatted_parts)
+    
+    def _format_candidates_compact(self, candidates_by_category: Dict[str, List[Tuple[int, float]]],
+                                   current_location: int) -> str:
+        """
+        Format candidate locations in a compact format by category.
+        Format per line: Grid ID, Frequency, Distance, Area Type
+        
+        Args:
+            candidates_by_category: Dict mapping POI categories to candidate lists
+            current_location: Current grid ID
+        
+        Returns:
+            Compact formatted candidates string
+        """
+        from util.utils import calculate_grid_distance
+        
+        formatted_lines = []
+        formatted_lines.append("Format: Grid ID, Attractive Score, Distance from current location, Category")
+        formatted_lines.append("")
+        
+        # Get POI data for area descriptions
+        poi_data = self.rag.poi_data if hasattr(self.rag, 'poi_data') and self.rag.poi_data else {}
+        
+        # Convert to list to exclude last category
+        category_items = list(candidates_by_category.items())
+        
+        # Iterate through all categories except the last one
+        for category, candidates in category_items[:-1]:
+            # Clean up category name
+            category_display = category.replace('_count', '').replace('_', ' ').title()
+            
+            formatted_lines.append(f"{category_display}:")
+            
+            for grid_id, score in candidates[:5]:  # Top 5 per category
+                dist = calculate_grid_distance(current_location, grid_id, self.city, 40)
+                
+                # Get area type description
+                area_type = "Mixed"
+                if grid_id in poi_data:
+                    poi_features = poi_data[grid_id]
+                    max_pct = 0
+                    for poi_type, pct in poi_features.items():
+                        if pct > max_pct:
+                            max_pct = pct
+                            area_type = poi_type.replace('_count', '').replace('_', ' ').title()
+                            if max_pct < 20:
+                                area_type = "Mixed"
+                
+                formatted_lines.append(f"  Grid {grid_id}, {score:.1f}, {dist:.2f}km")
+            
+            formatted_lines.append("")  # Empty line between categories
+        
+        return "\n".join(formatted_lines)
+    
     def _build_prediction_prompt(
         self,
         observation_trajectory: List[Dict[str, Any]],
@@ -352,6 +455,7 @@ class MobilityPredictor:
     ) -> str:
         """
         Build the final prediction prompt combining RAG summary and gravity candidates.
+        Uses compact, structured formatting for clarity.
         
         Args:
             observation_trajectory: Observation trajectory
@@ -365,60 +469,32 @@ class MobilityPredictor:
         from util.utils import get_mobility_mode
         mobility_mode = get_mobility_mode(self.city)
         
-        prompt = f"You are a mobility prediction expert analyzing {mobility_mode} patterns. "
-        prompt += "Note: Trajectories may include both movement and stationary periods (staying at the same location). "
-        prompt += "Your task is to predict the next location based on the following information:\n\n"
-        
-        # Add observation trajectory with distances
-        prompt += "## Current Trajectory:\n"
-        formatted_traj = format_trajectory_with_distances(
-            observation_trajectory,
-            city=self.city,
-            include_poi=False,
-            poi_data=None
-        )
-        prompt += formatted_traj + "\n"
-        
-        # Add RAG summary
-        prompt += f"\n## Next location of similar mobility trajectories:\n"
-        prompt += f"{rag_summary}\n"
-        
-        # Add gravity model candidates by category with distances
-        prompt += f"\n## Candidate Locations by POI Category:\n"
-        prompt += "Based on the gravity model, here are the most attractive locations for each category:\n"
-        prompt += "(Note: Current location is included as a candidate for stationary behavior)\n\n"
-        
         current_location = observation_trajectory[-1]['location_id']
         
-        # Show top 5 categories with their candidates and distances
-        category_count = 0
-        for category, candidates in candidates_by_category.items():
-            # if category_count >= 5:  # Limit to top 5 categories to avoid prompt length
-            #     break
-            
-            category_display = category.replace('_count', '')
-            candidate_str = format_candidates_with_distances(
-                candidates,
-                current_location,
-                city=self.city,
-                include_scores=False
-            )
-            prompt += f"- {category_display}: {candidate_str}\n"
-            category_count += 1
+        prompt = f"You are a mobility prediction expert analyzing {mobility_mode} patterns.\n"
+        prompt += "Note: Trajectories may include both movement and stationary periods.\n"
+        prompt += "Predict the next location based on the following information:\n\n"
         
-        # Get all unique candidates for the final instruction
-        all_candidates = set()
-        for category, candidates in candidates_by_category.items():
-            for grid_id, score in candidates[:3]:  # Top 3 per category
-                all_candidates.add(grid_id)
+        # Add compact trajectory format
+        prompt += "## Current Trajectory\n"
+        prompt += "Format: Grid ID (Area Type) with distances between consecutive locations\n"
+        compact_traj = self._format_trajectory_compact(observation_trajectory)
+        prompt += compact_traj + "\n\n"
         
-        candidate_list_str = ", ".join([f"Grid {c}" for c in sorted(list(all_candidates))[:20]])
+        # Add RAG summary
+        prompt += "## Similar Historical Patterns\n"
+        prompt += f"{rag_summary}\n\n"
         
-        # Add prediction instruction - simplified for single grid output
-        prompt += f"\n## Your Task:\n"
-        prompt += f"Based on the trajectory pattern, similar historical behaviors, and candidate locations, "
-        prompt += f"predict the next most likely location.\n"
-        prompt += f"Remember: The user may stay at the current location (Grid {current_location}) or move to a new location.\n\n"
+        # Add compact candidate locations
+        prompt += "## Candidate Locations by POI Category\n"
+        prompt += "(Current location included as a candidate for stationary behavior)\n\n"
+        compact_candidates = self._format_candidates_compact(candidates_by_category, current_location)
+        prompt += compact_candidates + "\n"
+        
+        # Add prediction instruction
+        prompt += f"## Task\n"
+        prompt += f"Predict the next most likely location based on trajectory patterns, historical behaviors, and candidates.\n"
+        prompt += f"The user may stay at Grid {current_location} or move to a new location.\n\n"
         prompt += f"Output format: Grid [ID]\n"
         prompt += f"Output only the grid ID, no explanation.\n\n"
         prompt += "Your prediction:"

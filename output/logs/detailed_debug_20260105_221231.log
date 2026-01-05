@@ -1,0 +1,567 @@
+[2026-01-05 22:12:31] Loading datasets...
+[2026-01-05 22:13:12] Train samples: 10
+[2026-01-05 22:13:12] Validation samples: 10
+[2026-01-05 22:13:12] Test samples: 10
+[2026-01-05 22:13:12] 
+Initializing MobilityPredictor model...
+[2026-01-05 22:13:12]   LLM Model: Deepseek-R1-Distill-Qwen-3B
+[2026-01-05 22:13:12]   RAG Top-M Samples: 5
+[2026-01-05 22:13:12]   Gravity Top-N Candidates: 3
+[2026-01-05 22:13:12]   Prediction Top-K: 10
+[2026-01-05 22:13:22] Model initialized successfully
+
+[2026-01-05 22:13:22] 
+================================================================================
+[2026-01-05 22:13:22] STARTING DETAILED TESTING (DEBUG MODE)
+[2026-01-05 22:13:22] ================================================================================
+[2026-01-05 22:13:22] 
+Testing on 10 samples...
+
+[2026-01-05 22:13:22] 
+================================================================================
+[2026-01-05 22:13:22] DEBUGGING SAMPLE 1
+[2026-01-05 22:13:22] ================================================================================
+[2026-01-05 22:13:22] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 22:13:22]   1. Location 804 at 20220708 08:30
+[2026-01-05 22:13:22]   2. Location 804 at 20220708 14:30
+[2026-01-05 22:13:22]   3. Location 804 at 20220708 20:30
+[2026-01-05 22:13:22]   4. Location 804 at 20220709 03:30
+[2026-01-05 22:13:22]   5. Location 1216 at 20220711 05:30
+[2026-01-05 22:13:22]   6. Location 1216 at 20220713 20:30
+[2026-01-05 22:13:22]   7. Location 1176 at 20220715 08:30
+[2026-01-05 22:13:22]   8. Location 1176 at 20220716 07:30
+[2026-01-05 22:13:22]   9. Location 1176 at 20220719 00:30
+[2026-01-05 22:13:22]   10. Location 1176 at 20220720 10:00
+[2026-01-05 22:13:22]   11. Location 1176 at 20220721 02:00
+[2026-01-05 22:13:22]   12. Location 1176 at 20220721 06:00
+[2026-01-05 22:13:22] 
+📍 Current Location: Grid 1176
+[2026-01-05 22:13:22] 🎯 Ground Truth Next Location: Grid 1176
+[2026-01-05 22:13:22] 
+--------------------------------------------------------------------------------
+[2026-01-05 22:13:22] STAGE 1: RAG RETRIEVAL
+[2026-01-05 22:13:22] --------------------------------------------------------------------------------
+[2026-01-05 22:13:23] 
+❌ Error processing sample 0: list index out of range
+[2026-01-05 22:13:23] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 199, in retrieve_similar_samples
+    similar_samples = [self.database_samples[idx] for idx in indices]
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^
+IndexError: list index out of range
+
+[2026-01-05 22:13:23] 
+================================================================================
+[2026-01-05 22:13:23] DEBUGGING SAMPLE 2
+[2026-01-05 22:13:23] ================================================================================
+[2026-01-05 22:13:23] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 22:13:23]   1. Location 804 at 20220708 14:30
+[2026-01-05 22:13:23]   2. Location 804 at 20220708 20:30
+[2026-01-05 22:13:23]   3. Location 804 at 20220709 03:30
+[2026-01-05 22:13:23]   4. Location 1216 at 20220711 05:30
+[2026-01-05 22:13:23]   5. Location 1216 at 20220713 20:30
+[2026-01-05 22:13:23]   6. Location 1176 at 20220715 08:30
+[2026-01-05 22:13:23]   7. Location 1176 at 20220716 07:30
+[2026-01-05 22:13:23]   8. Location 1176 at 20220719 00:30
+[2026-01-05 22:13:23]   9. Location 1176 at 20220720 10:00
+[2026-01-05 22:13:23]   10. Location 1176 at 20220721 02:00
+[2026-01-05 22:13:23]   11. Location 1176 at 20220721 06:00
+[2026-01-05 22:13:23]   12. Location 1176 at 20220721 20:30
+[2026-01-05 22:13:23] 
+📍 Current Location: Grid 1176
+[2026-01-05 22:13:23] 🎯 Ground Truth Next Location: Grid 1216
+[2026-01-05 22:13:23] 
+--------------------------------------------------------------------------------
+[2026-01-05 22:13:23] STAGE 1: RAG RETRIEVAL
+[2026-01-05 22:13:23] --------------------------------------------------------------------------------
+[2026-01-05 22:13:23] 
+❌ Error processing sample 1: list index out of range
+[2026-01-05 22:13:23] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 199, in retrieve_similar_samples
+    similar_samples = [self.database_samples[idx] for idx in indices]
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^
+IndexError: list index out of range
+
+[2026-01-05 22:13:23] 
+================================================================================
+[2026-01-05 22:13:23] DEBUGGING SAMPLE 3
+[2026-01-05 22:13:23] ================================================================================
+[2026-01-05 22:13:23] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 22:13:23]   1. Location 804 at 20220708 20:30
+[2026-01-05 22:13:23]   2. Location 804 at 20220709 03:30
+[2026-01-05 22:13:23]   3. Location 1216 at 20220711 05:30
+[2026-01-05 22:13:23]   4. Location 1216 at 20220713 20:30
+[2026-01-05 22:13:23]   5. Location 1176 at 20220715 08:30
+[2026-01-05 22:13:23]   6. Location 1176 at 20220716 07:30
+[2026-01-05 22:13:23]   7. Location 1176 at 20220719 00:30
+[2026-01-05 22:13:23]   8. Location 1176 at 20220720 10:00
+[2026-01-05 22:13:23]   9. Location 1176 at 20220721 02:00
+[2026-01-05 22:13:23]   10. Location 1176 at 20220721 06:00
+[2026-01-05 22:13:23]   11. Location 1176 at 20220721 20:30
+[2026-01-05 22:13:23]   12. Location 1216 at 20220723 16:00
+[2026-01-05 22:13:23] 
+📍 Current Location: Grid 1216
+[2026-01-05 22:13:23] 🎯 Ground Truth Next Location: Grid 1216
+[2026-01-05 22:13:23] 
+--------------------------------------------------------------------------------
+[2026-01-05 22:13:23] STAGE 1: RAG RETRIEVAL
+[2026-01-05 22:13:23] --------------------------------------------------------------------------------
+[2026-01-05 22:13:23] 
+❌ Error processing sample 2: list index out of range
+[2026-01-05 22:13:23] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 199, in retrieve_similar_samples
+    similar_samples = [self.database_samples[idx] for idx in indices]
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^
+IndexError: list index out of range
+
+[2026-01-05 22:13:23] 
+================================================================================
+[2026-01-05 22:13:23] DEBUGGING SAMPLE 4
+[2026-01-05 22:13:23] ================================================================================
+[2026-01-05 22:13:23] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 22:13:23]   1. Location 804 at 20220709 03:30
+[2026-01-05 22:13:23]   2. Location 1216 at 20220711 05:30
+[2026-01-05 22:13:23]   3. Location 1216 at 20220713 20:30
+[2026-01-05 22:13:23]   4. Location 1176 at 20220715 08:30
+[2026-01-05 22:13:23]   5. Location 1176 at 20220716 07:30
+[2026-01-05 22:13:23]   6. Location 1176 at 20220719 00:30
+[2026-01-05 22:13:23]   7. Location 1176 at 20220720 10:00
+[2026-01-05 22:13:23]   8. Location 1176 at 20220721 02:00
+[2026-01-05 22:13:23]   9. Location 1176 at 20220721 06:00
+[2026-01-05 22:13:23]   10. Location 1176 at 20220721 20:30
+[2026-01-05 22:13:23]   11. Location 1216 at 20220723 16:00
+[2026-01-05 22:13:23]   12. Location 1216 at 20220724 13:30
+[2026-01-05 22:13:23] 
+📍 Current Location: Grid 1216
+[2026-01-05 22:13:23] 🎯 Ground Truth Next Location: Grid 1216
+[2026-01-05 22:13:23] 
+--------------------------------------------------------------------------------
+[2026-01-05 22:13:23] STAGE 1: RAG RETRIEVAL
+[2026-01-05 22:13:23] --------------------------------------------------------------------------------
+[2026-01-05 22:13:23] 
+❌ Error processing sample 3: list index out of range
+[2026-01-05 22:13:23] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 199, in retrieve_similar_samples
+    similar_samples = [self.database_samples[idx] for idx in indices]
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^
+IndexError: list index out of range
+
+[2026-01-05 22:13:23] 
+================================================================================
+[2026-01-05 22:13:23] DEBUGGING SAMPLE 5
+[2026-01-05 22:13:23] ================================================================================
+[2026-01-05 22:13:23] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 22:13:23]   1. Location 1216 at 20220711 05:30
+[2026-01-05 22:13:23]   2. Location 1216 at 20220713 20:30
+[2026-01-05 22:13:23]   3. Location 1176 at 20220715 08:30
+[2026-01-05 22:13:23]   4. Location 1176 at 20220716 07:30
+[2026-01-05 22:13:23]   5. Location 1176 at 20220719 00:30
+[2026-01-05 22:13:23]   6. Location 1176 at 20220720 10:00
+[2026-01-05 22:13:23]   7. Location 1176 at 20220721 02:00
+[2026-01-05 22:13:23]   8. Location 1176 at 20220721 06:00
+[2026-01-05 22:13:23]   9. Location 1176 at 20220721 20:30
+[2026-01-05 22:13:23]   10. Location 1216 at 20220723 16:00
+[2026-01-05 22:13:23]   11. Location 1216 at 20220724 13:30
+[2026-01-05 22:13:23]   12. Location 1216 at 20220725 12:30
+[2026-01-05 22:13:23] 
+📍 Current Location: Grid 1216
+[2026-01-05 22:13:23] 🎯 Ground Truth Next Location: Grid 1216
+[2026-01-05 22:13:23] 
+--------------------------------------------------------------------------------
+[2026-01-05 22:13:23] STAGE 1: RAG RETRIEVAL
+[2026-01-05 22:13:23] --------------------------------------------------------------------------------
+[2026-01-05 22:13:23] 
+❌ Error processing sample 4: list index out of range
+[2026-01-05 22:13:23] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 199, in retrieve_similar_samples
+    similar_samples = [self.database_samples[idx] for idx in indices]
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^
+IndexError: list index out of range
+
+[2026-01-05 22:13:23] 
+================================================================================
+[2026-01-05 22:13:23] DEBUGGING SAMPLE 6
+[2026-01-05 22:13:23] ================================================================================
+[2026-01-05 22:13:23] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 22:13:23]   1. Location 1216 at 20220713 20:30
+[2026-01-05 22:13:23]   2. Location 1176 at 20220715 08:30
+[2026-01-05 22:13:23]   3. Location 1176 at 20220716 07:30
+[2026-01-05 22:13:23]   4. Location 1176 at 20220719 00:30
+[2026-01-05 22:13:23]   5. Location 1176 at 20220720 10:00
+[2026-01-05 22:13:23]   6. Location 1176 at 20220721 02:00
+[2026-01-05 22:13:23]   7. Location 1176 at 20220721 06:00
+[2026-01-05 22:13:23]   8. Location 1176 at 20220721 20:30
+[2026-01-05 22:13:23]   9. Location 1216 at 20220723 16:00
+[2026-01-05 22:13:23]   10. Location 1216 at 20220724 13:30
+[2026-01-05 22:13:23]   11. Location 1216 at 20220725 12:30
+[2026-01-05 22:13:23]   12. Location 1216 at 20220726 05:00
+[2026-01-05 22:13:23] 
+📍 Current Location: Grid 1216
+[2026-01-05 22:13:23] 🎯 Ground Truth Next Location: Grid 1136
+[2026-01-05 22:13:23] 
+--------------------------------------------------------------------------------
+[2026-01-05 22:13:23] STAGE 1: RAG RETRIEVAL
+[2026-01-05 22:13:23] --------------------------------------------------------------------------------
+[2026-01-05 22:13:23] 
+❌ Error processing sample 5: list index out of range
+[2026-01-05 22:13:23] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 199, in retrieve_similar_samples
+    similar_samples = [self.database_samples[idx] for idx in indices]
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^
+IndexError: list index out of range
+
+[2026-01-05 22:13:23] 
+================================================================================
+[2026-01-05 22:13:23] DEBUGGING SAMPLE 7
+[2026-01-05 22:13:23] ================================================================================
+[2026-01-05 22:13:23] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 22:13:23]   1. Location 1176 at 20220715 08:30
+[2026-01-05 22:13:23]   2. Location 1176 at 20220716 07:30
+[2026-01-05 22:13:23]   3. Location 1176 at 20220719 00:30
+[2026-01-05 22:13:23]   4. Location 1176 at 20220720 10:00
+[2026-01-05 22:13:23]   5. Location 1176 at 20220721 02:00
+[2026-01-05 22:13:23]   6. Location 1176 at 20220721 06:00
+[2026-01-05 22:13:23]   7. Location 1176 at 20220721 20:30
+[2026-01-05 22:13:23]   8. Location 1216 at 20220723 16:00
+[2026-01-05 22:13:23]   9. Location 1216 at 20220724 13:30
+[2026-01-05 22:13:23]   10. Location 1216 at 20220725 12:30
+[2026-01-05 22:13:23]   11. Location 1216 at 20220726 05:00
+[2026-01-05 22:13:23]   12. Location 1136 at 20220727 01:30
+[2026-01-05 22:13:23] 
+📍 Current Location: Grid 1136
+[2026-01-05 22:13:23] 🎯 Ground Truth Next Location: Grid 465
+[2026-01-05 22:13:23] 
+--------------------------------------------------------------------------------
+[2026-01-05 22:13:23] STAGE 1: RAG RETRIEVAL
+[2026-01-05 22:13:23] --------------------------------------------------------------------------------
+[2026-01-05 22:13:23] 
+❌ Error processing sample 6: list index out of range
+[2026-01-05 22:13:23] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 199, in retrieve_similar_samples
+    similar_samples = [self.database_samples[idx] for idx in indices]
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^
+IndexError: list index out of range
+
+[2026-01-05 22:13:23] 
+================================================================================
+[2026-01-05 22:13:23] DEBUGGING SAMPLE 8
+[2026-01-05 22:13:23] ================================================================================
+[2026-01-05 22:13:23] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 22:13:23]   1. Location 1176 at 20220716 07:30
+[2026-01-05 22:13:23]   2. Location 1176 at 20220719 00:30
+[2026-01-05 22:13:23]   3. Location 1176 at 20220720 10:00
+[2026-01-05 22:13:23]   4. Location 1176 at 20220721 02:00
+[2026-01-05 22:13:23]   5. Location 1176 at 20220721 06:00
+[2026-01-05 22:13:23]   6. Location 1176 at 20220721 20:30
+[2026-01-05 22:13:23]   7. Location 1216 at 20220723 16:00
+[2026-01-05 22:13:23]   8. Location 1216 at 20220724 13:30
+[2026-01-05 22:13:23]   9. Location 1216 at 20220725 12:30
+[2026-01-05 22:13:23]   10. Location 1216 at 20220726 05:00
+[2026-01-05 22:13:23]   11. Location 1136 at 20220727 01:30
+[2026-01-05 22:13:23]   12. Location 465 at 20220729 07:00
+[2026-01-05 22:13:23] 
+📍 Current Location: Grid 465
+[2026-01-05 22:13:23] 🎯 Ground Truth Next Location: Grid 975
+[2026-01-05 22:13:23] 
+--------------------------------------------------------------------------------
+[2026-01-05 22:13:23] STAGE 1: RAG RETRIEVAL
+[2026-01-05 22:13:23] --------------------------------------------------------------------------------
+[2026-01-05 22:13:23] 
+❌ Error processing sample 7: list index out of range
+[2026-01-05 22:13:23] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 199, in retrieve_similar_samples
+    similar_samples = [self.database_samples[idx] for idx in indices]
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^
+IndexError: list index out of range
+
+[2026-01-05 22:13:23] 
+================================================================================
+[2026-01-05 22:13:23] DEBUGGING SAMPLE 9
+[2026-01-05 22:13:23] ================================================================================
+[2026-01-05 22:13:23] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 22:13:23]   1. Location 1176 at 20220719 00:30
+[2026-01-05 22:13:23]   2. Location 1176 at 20220720 10:00
+[2026-01-05 22:13:23]   3. Location 1176 at 20220721 02:00
+[2026-01-05 22:13:23]   4. Location 1176 at 20220721 06:00
+[2026-01-05 22:13:23]   5. Location 1176 at 20220721 20:30
+[2026-01-05 22:13:23]   6. Location 1216 at 20220723 16:00
+[2026-01-05 22:13:23]   7. Location 1216 at 20220724 13:30
+[2026-01-05 22:13:23]   8. Location 1216 at 20220725 12:30
+[2026-01-05 22:13:23]   9. Location 1216 at 20220726 05:00
+[2026-01-05 22:13:23]   10. Location 1136 at 20220727 01:30
+[2026-01-05 22:13:23]   11. Location 465 at 20220729 07:00
+[2026-01-05 22:13:23]   12. Location 975 at 20220801 03:00
+[2026-01-05 22:13:23] 
+📍 Current Location: Grid 975
+[2026-01-05 22:13:23] 🎯 Ground Truth Next Location: Grid 1298
+[2026-01-05 22:13:23] 
+--------------------------------------------------------------------------------
+[2026-01-05 22:13:23] STAGE 1: RAG RETRIEVAL
+[2026-01-05 22:13:23] --------------------------------------------------------------------------------
+[2026-01-05 22:13:23] 
+❌ Error processing sample 8: list index out of range
+[2026-01-05 22:13:23] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 199, in retrieve_similar_samples
+    similar_samples = [self.database_samples[idx] for idx in indices]
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^
+IndexError: list index out of range
+
+[2026-01-05 22:13:23] 
+================================================================================
+[2026-01-05 22:13:23] DEBUGGING SAMPLE 10
+[2026-01-05 22:13:23] ================================================================================
+[2026-01-05 22:13:23] 
+📍 Observation Trajectory (12 points):
+[2026-01-05 22:13:23]   1. Location 1176 at 20220720 10:00
+[2026-01-05 22:13:23]   2. Location 1176 at 20220721 02:00
+[2026-01-05 22:13:23]   3. Location 1176 at 20220721 06:00
+[2026-01-05 22:13:23]   4. Location 1176 at 20220721 20:30
+[2026-01-05 22:13:23]   5. Location 1216 at 20220723 16:00
+[2026-01-05 22:13:23]   6. Location 1216 at 20220724 13:30
+[2026-01-05 22:13:23]   7. Location 1216 at 20220725 12:30
+[2026-01-05 22:13:23]   8. Location 1216 at 20220726 05:00
+[2026-01-05 22:13:23]   9. Location 1136 at 20220727 01:30
+[2026-01-05 22:13:23]   10. Location 465 at 20220729 07:00
+[2026-01-05 22:13:23]   11. Location 975 at 20220801 03:00
+[2026-01-05 22:13:23]   12. Location 1298 at 20220802 06:30
+[2026-01-05 22:13:23] 
+📍 Current Location: Grid 1298
+[2026-01-05 22:13:23] 🎯 Ground Truth Next Location: Grid 1216
+[2026-01-05 22:13:23] 
+--------------------------------------------------------------------------------
+[2026-01-05 22:13:23] STAGE 1: RAG RETRIEVAL
+[2026-01-05 22:13:23] --------------------------------------------------------------------------------
+[2026-01-05 22:13:23] 
+❌ Error processing sample 9: list index out of range
+[2026-01-05 22:13:23] Traceback (most recent call last):
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 310, in run_detailed_test
+    predictions, metrics = self.debug_single_prediction(idx, sample)
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/workspace/China_Journal/trainer/detailed_trainer.py", line 189, in debug_single_prediction
+    rag_summary, similar_samples, similarities = self.predictor.rag.generate_rag_summary(
+                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory=observation,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rag_top_m_samples=self.predictor.rag_top_m_samples,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        print_prompt=self.print_prompts
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 225, in generate_rag_summary
+    similar_samples, similarities, indices = self.retrieve_similar_samples(
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        query_trajectory, rag_top_m_samples
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/workspace/China_Journal/model/RAG.py", line 199, in retrieve_similar_samples
+    similar_samples = [self.database_samples[idx] for idx in indices]
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^
+IndexError: list index out of range
+
+[2026-01-05 22:13:23] 
+================================================================================
+[2026-01-05 22:13:23] OVERALL TEST RESULTS
+[2026-01-05 22:13:23] ================================================================================
+[2026-01-05 22:13:23] 
+================================================================================
+[2026-01-05 22:13:23] DETAILED TESTING COMPLETED
+[2026-01-05 22:13:23] ================================================================================

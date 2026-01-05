@@ -367,7 +367,7 @@ class MobilityRAG:
         
         # New structured synthesis prompt with enhanced JSON format requirement
         synthesis_prompt = f"""Analyze the following mobility patterns and provide a structured summary in JSON format.
-        Summarize the average distance from previous locations, poi transitions or poi categories of next locations,
+        Summarize the average distance from previous locations, 2-3 possible poi categories of next locations,
         analyze spatial patterns such as distance trends and area characteristics in 3-4 sentences, 
         and describe time patterns in 2 sentences, or 'No clear temporal pattern' .
         These are mobility trajectories that are semantically similar to a query trajectory:
@@ -375,10 +375,9 @@ class MobilityRAG:
 {context}
 
 Output format (JSON):
-
 {{
   "avg_distance_from_previous_location_km": <number>,
-  "area_type_of_next_location": "<text>",
+  "category_of_next_location": "<text>",
   "spatial_patterns": "<text>",
   "temporal_patterns": "<text>"
 }}
@@ -457,8 +456,8 @@ Output only json, no explanation.
             llm_response = llm_response.replace('<think>', '')
         
         # Step 2: Remove markdown code blocks if present
-        llm_response = re.sub(r'```json\s*', '', llm_response)
-        llm_response = re.sub(r'```\s*', '', llm_response)
+        llm_response = re.sub(r'\n\n```json\s*', '', llm_response)
+        llm_response = re.sub(r'\n```\s*', '', llm_response)
         
         # Step 3: Remove any leading/trailing whitespace
         llm_response = llm_response.strip()
@@ -495,7 +494,7 @@ Output only json, no explanation.
                 raise ValueError(f"Failed to parse JSON: {e}")
         
         # Step 6: Validate required fields (updated for new format)
-        required_fields = ['avg_distance_from_previous_location_km','area_type_of_next_location', 'spatial_patterns', 'temporal_patterns']
+        required_fields = ['avg_distance_from_previous_location_km','category_of_next_location', 'spatial_patterns', 'temporal_patterns']
         for field in required_fields:
             if field not in summary_json:
                 # Check if it's a typo or optional

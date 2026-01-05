@@ -569,9 +569,27 @@ Rules:
 - RAG.py脚本中，包括RAG模块prompt优化的实现。
 - detailed_trainer.py脚本中，包括RAG模块调用部分的修改。
 ---
+# Prompt_5.2[最终推理Prompt精简]
+## 背景
+我觉得最终推理的Prompt不够精简。
+1、例如可以用一个函数，简单分析Current Trajectory的变化，然后用一个结构化的模板来表示，可以再最开头说明每一列的含义，然后用简单的形式表示，例如 Grid 21 (Residential) 0.2km → Grid 34 (Office) 5.0km。然后把这个结构化的模板直接放到Prompt中。这样也可以先稍微分析一下轨迹的变化趋势，方便LLM理解。
+2、 Candidate Locations by POI Category的部分也可以精简一下，在最开头说明每一列的含义，然后就不用每一行都说明字段，例如 Grid ID, Frequency, Distance to Current Location, Area Type。然后直接用简单的形式表示，例如 Grid 34, 10, 5.0km, Office。
+## 任务
+请完成以下任务：
+1. **最终推理Prompt精简**：
+   - 修改MobilityPredictor.py脚本中的最终推理Prompt设计，按照上述要求进行精简。
+   - 确保修改后的Prompt能够引导LLM生成符合要求的最终预测回答。
+2. **测试修改**：
+   - 测试修改后的MobilityPredictor.py脚本，确保最终推理Prompt能够正确工作，并提升预测的准确性。
+## 约束
+- 使用Python编程语言。
+- 保持原有脚本的结构和逻辑，尽量只修改必要的部分。
+- 过程中需要有适当的注释和过程打印。
+## 输出格式
+- 提交修改后的MobilityPredictor.py脚本文件。
+- 脚本中，包括最终推理Prompt精简的实现。  
 
-
-
+---
 # 代码精简优化
 # Prompt_6.1[代码精简优化]
 ## 背景

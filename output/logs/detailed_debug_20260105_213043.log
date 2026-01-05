@@ -1,0 +1,10 @@
+[2026-01-05 21:30:43] Loading datasets...
+[2026-01-05 21:31:22] Train samples: 10
+[2026-01-05 21:31:22] Validation samples: 10
+[2026-01-05 21:31:22] Test samples: 10
+[2026-01-05 21:31:22] 
+Initializing MobilityPredictor model...
+[2026-01-05 21:31:22]   LLM Model: Gemma-2-9B
+[2026-01-05 21:31:22]   RAG Top-M Samples: 5
+[2026-01-05 21:31:22]   Gravity Top-N Candidates: 3
+[2026-01-05 21:31:22]   Prediction Top-K: 10
