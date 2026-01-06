@@ -109,6 +109,7 @@ class MobilityTrainer:
             gravity_weight = model_config['gravity']['weight']
             gravity_radius = model_config['gravity']['radius']
             top_k_predictions = model_config['prediction']['top_k_predictions']
+            prediction_time_interval = model_config['prediction'].get('time_interval', '1 hour')
             # Generation parameters
             temperature = model_config['llm'].get('temperature', 0.2)
             top_p = model_config['llm'].get('top_p', 0.8)
@@ -124,6 +125,7 @@ class MobilityTrainer:
             gravity_weight = model_config['gravity_weight']
             gravity_radius = model_config['gravity_radius']
             top_k_predictions = model_config['top_k_predictions']
+            prediction_time_interval = '1 hour'
             # Default generation parameters for old format
             temperature = 0.2
             top_p = 0.8
@@ -135,6 +137,7 @@ class MobilityTrainer:
         self.log(f"  RAG Top-M Samples: {rag_top_m_samples}")
         self.log(f"  Gravity Top-N Candidates: {gravity_top_n_candidates}")
         self.log(f"  Prediction Top-K: {top_k_predictions}")
+        self.log(f"  Prediction Time Interval: {prediction_time_interval}")
         self.log(f"  Generation params: temperature={temperature}, top_p={top_p}, top_k={top_k}, do_sample={do_sample}")
         
         self.predictor = MobilityPredictor(
@@ -153,7 +156,9 @@ class MobilityTrainer:
             top_p=top_p,
             top_k=top_k,
             do_sample=do_sample,
-            max_new_tokens=max_new_tokens
+            max_new_tokens=max_new_tokens,
+            # Pass prediction parameters
+            prediction_time_interval=prediction_time_interval
         )
 
         # LoRA微调：只训练LoRA参数，其余全部冻结

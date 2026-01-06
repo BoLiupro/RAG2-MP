@@ -43,7 +43,9 @@ class MobilityPredictor:
         top_p: float = 0.8,
         top_k: int = 40,
         do_sample: bool = True,
-        max_new_tokens: int = 256
+        max_new_tokens: int = 256,
+        # Prediction parameters
+        prediction_time_interval: str = "1 hour"
     ):
         """
         Initialize the MobilityPredictor.
@@ -70,6 +72,7 @@ class MobilityPredictor:
         self.gravity_radius = gravity_radius
         self.verbose = verbose
         self.num_grids = 1600  # Standard grid size for all cities
+        self.prediction_time_interval = prediction_time_interval
         
         # Generation parameters
         self.temperature = temperature
@@ -334,18 +337,27 @@ class MobilityPredictor:
         # Get POI data for area type information
         poi_data = self.rag.poi_data if hasattr(self.rag, 'poi_data') and self.rag.poi_data else {}
 
-        def get_area_type(loc_id):
-            area_type = "Mixed"
-            if loc_id in poi_data:
-                poi_features = poi_data[loc_id]
-                max_pct = 0
-                for poi_type, pct in poi_features.items():
-                    if pct > max_pct:
-                        max_pct = pct
-                        area_type = poi_type.replace('_count', '').replace('_', ' ').title()
-                if max_pct < 20:
-                    area_type = "Mixed"
-            return area_type
+        def get_area_types(loc_id, top_n=2):
+            """Get top N area types for a location"""
+            if loc_id not in poi_data:
+                return "Mixed"
+            
+            poi_features = poi_data[loc_id]
+            # Get all POI types with their percentages
+            poi_list = [(poi_type.replace('_count', '').replace('_', ' ').title(), pct) 
+                       for poi_type, pct in poi_features.items() if '_count' in poi_type]
+            # Sort by percentage descending
+            poi_list.sort(key=lambda x: x[1], reverse=True)
+            
+            # Get top N types with percentage > 0
+            top_types = [name for name, pct in poi_list[:top_n] if pct > 0]
+            
+            if not top_types:
+                return "Mixed"
+            elif len(top_types) == 1:
+                return top_types[0]
+            else:
+                return " & ".join(top_types)
 
         # 合并连续相同 grid
         merged = []  # 每项: {loc_id, start_idx, end_idx, count, start_time, end_time}
@@ -393,13 +405,11 @@ class MobilityPredictor:
         formatted_parts = []
         for idx, seg in enumerate(merged):
             loc_id = seg['loc_id']
-            area_type = get_area_type(loc_id)
-            count = seg['count']
+            area_types = get_area_types(loc_id, top_n=2)
             start_time = fmt_time(seg['start_time'])
             end_time = fmt_time(seg['end_time'])
             time_str = f"[{start_time}~{end_time}]" if start_time != end_time else f"[{start_time}]"
-            count_str = f" x{count}" if count > 1 else ""
-            part = f"Grid {loc_id} ({area_type}){count_str} {time_str}"
+            part = f"Grid {loc_id} ({area_types}) {time_str}"
             if idx > 0:
                 # 计算距离
                 prev_loc_id = merged[idx-1]['loc_id']
@@ -414,7 +424,7 @@ class MobilityPredictor:
                                    current_location: int) -> str:
         """
         Format candidate locations in a compact format by category.
-        Each POI category displayed on a single line.
+        Each POI category displayed on a single line with attractive scores.
         
         Args:
             candidates_by_category: Dict mapping POI categories to candidate lists
@@ -426,21 +436,19 @@ class MobilityPredictor:
         from util.utils import calculate_grid_distance
         
         formatted_lines = []
-        formatted_lines.append("Format: [Category]: [Grid ID], [Distance to current location]...")
+        formatted_lines.append("Format: [Category]: [Grid ID] (Attractive Score), [Distance to current location]...")
+        formatted_lines.append("(Locations are ranked by attractiveness; higher scores indicate more likely destinations)")
         
-        # Convert to list to exclude last category
-        category_items = list(candidates_by_category.items())
-        
-        # Iterate through all categories except the last one
-        for category, candidates in category_items[:-1]:
-            # Clean up category name
+        # Sort categories and process all of them
+        for category, candidates in sorted(candidates_by_category.items()):
+            # Clean up category name and fix spelling
             category_display = category.replace('_count', '').replace('_', ' ').title()
             
             # Format all candidates for this category on a single line
             candidate_strs = []
             for grid_id, score in candidates[:self.gravity_top_n_candidates]:  # Strictly limit by config
                 dist = calculate_grid_distance(current_location, grid_id, self.city, 40)
-                candidate_strs.append(f"Grid {grid_id}, {dist:.2f}km")
+                candidate_strs.append(f"Grid {grid_id} ({score:.2f}), {dist:.2f}km")
             
             # Join all candidates with " | " separator
             formatted_lines.append(f"{category_display}: {' | '.join(candidate_strs)}")
@@ -500,11 +508,11 @@ class MobilityPredictor:
         prompt += f"## Your Task\n"
         prompt += f"You are a mobility prediction expert analyzing human mobility patterns.\n"
         prompt += f"The user may stay at Grid {current_location} or move to a new location.\n"
-        prompt += f"Predict the next most likely location based on the following information:\n\n"
+        prompt += f"Predict the next most likely location within the next {self.prediction_time_interval} based on the following information:\n\n"
         
         # Add compact trajectory format
         prompt += "## Current Trajectory\n"
-        prompt += "Format: Grid ID (Area Type) with distances between consecutive locations\n"
+        prompt += "Format: Grid ID (Top 2 Area Types) [Time Range]\n"
         compact_traj = self._format_trajectory_compact(observation_trajectory)
         prompt += compact_traj + "\n\n"
         

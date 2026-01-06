@@ -61,6 +61,7 @@ model:
   # ---------------------------------------------------------------------------
   prediction:
     top_k_predictions: 10  # Number of top location predictions to return
+    time_interval: "1 hour"  # Time interval for next location prediction (e.g., "1 hour", "2 hours", "30 minutes")
 
 # ============================================================================
 # Training Configuration

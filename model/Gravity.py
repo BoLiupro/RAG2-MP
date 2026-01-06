@@ -63,7 +63,7 @@ class GravityModel:
             'Sports & Fitness_count',
             'Hotels & Accommodations_count',
             'Financial Institutions_count',
-            'Dining & Cusine_count'  # Note: 'Cusine' is spelled this way in the data
+            'Dining & Cuisine_count'
         ]
         
         self.poi_data = self._load_poi_data(poi_data_path)

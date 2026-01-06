@@ -17,7 +17,7 @@
       + 网格划分，确定网格中心
       + POI类型一共14类，分别为：【Transportation Facilities, Leisure & Entertainment, Companies & Enterprises, Healthcare, 
       Residential, Tourist Attractions, Automotive, Life Services, Science & Education & Culture, Shopping & Consumer Goods,
-      Sports & Fitness, Hotels & Accommodations, Financial Institutions, Dining & Cusine】。中文分别对应:[交通设置、休闲娱乐、公司企业、医疗保健、
+      Sports & Fitness, Hotels & Accommodations, Financial Institutions, Dining & Cuisine】。中文分别对应:[交通设置、休闲娱乐、公司企业、医疗保健、
       商务住宅、旅游景点、汽车相关、生活服务、科教文化、购物消费、运动健身、酒店住宿、金融机构、餐饮美食]，对应POI.csv文件中大类。但是要注意的是,[生活服务]这个大类下面包含了一些过于频繁的中类，比如[公共厕所、公用电话]，这两个中类不考虑。
       + POI.csv坐标系从GCJ-02转换成WGS-84
       + 遍历每个小的网格，统计每个大类POI的数量，最终得到每个小网格的各种POI百分比和POI总数量。
@@ -30,6 +30,7 @@
       + 所有samples进行检查，必须每一步都在研究空间范围内，位置由坐标系变换到对应Location_ID.符合的保留，不符合的丢弃。
       + 数据统计，调整参数
       + 需要针对不同出行方式拟合gravity model的分母
+      + sample_ratio函数：nanchang:0.15, shenzhen:0.03,beijing:0.015
 ---
 # Prompt_1.1[POI数据处理]
 ## 背景
@@ -149,6 +150,34 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 重新运行修改后的脚本，生成处理后的所有城市出行轨迹数据csv文件，包括rag.csv, train.csv, val.csv和test.csv。文件全部保存在data/{city}目录下。
 
 ---
+# Prompt_1.6[Mobility数据处理bug]
+## 背景
+现在mobility数据处理有一个问题，那就是得到的轨迹并不是严格等时间划分的。现在的时间是乱的。给你一个目前数据的片段：user_id,timestamp,location_id
+10000,20220803 03:00,1447
+10000,20220731 16:30,1328
+10000,20220729 06:30,1487
+10000,20220723 03:30,1487
+10000,20220731 21:00,1487
+10000,20220718 00:00,1487
+10000,20220723 20:00,1447
+10000,20220727 03:30,1487
+10000,20220830 08:00,1447
+你会发现时间根本不是连续的，而且是乱的。我需要你帮我修改mobility_processing.py脚本，确保得到的轨迹是严格等时间划分的。也就是说，对于每个user，时间应该是连续的，并且按照指定的时间间隔进行划分，比如30分钟、1小时等。如果某个时间点没有位置数据，可以用前一个时间点的位置进行填充，或者用特殊标记表示缺失位置。
+## 任务
+请完成以下任务：
+1. **轨迹时间处理修改**：
+   - 修改mobility_processing.py脚本中的轨迹时间处理部分，确保得到的轨迹是严格等时间划分的。
+   - 对于每个user，生成一个连续的时间序列，按照指定的时间间隔进行划分。
+   - 如果某个时间点没有位置数据，使用前一个时间点的位置进行填充，或者用特殊标记表示缺失位置。
+## 约束
+- 使用Python编程语言。
+- 保持原有脚本的结构和逻辑，尽量只修改必要的部分。
+- 过程中需要有适当的注释和过程打印。
+## 输出格式
+- 提交修改后的mobility_processing.py脚本。
+- 重新运行修改后的脚本，生成处理后的所有城市出行轨迹数据csv文件，包括rag.csv, train.csv, val.csv和test.csv。文件全部保存在data/{city}目录下。
+---
+
 # 代码框架
 ---
 我这个项目解决的问题是human mobility prediction,即根据user历史轨迹来预测下一步出现的位置。数学公式定义是：input包括user的历史轨迹S={s_1,s_2,...,s_i},每个s_i=(li,ti)，表示在时间ti出现在grid li (li是spatial identifier)位置上。output是下一个时间点t_(i+1)出现的位置l_(i+1)。我的method主要是将LLM和改进版的garvity model结合起来进行预测。主要包含三个module：
@@ -414,7 +443,7 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 ---
 # Prompt_3.5[BUG修复]
 ## 背景
-现在我在测试整个trainer.py脚本的过程中，发现LLM输出Rag_summary时出现异常。训练时第一个sample是正常的，但是第二个sample，synthesis_prompt="Analyze the following mobility patterns and provide a structured summary in JSON format.\n\nQuery trajectory ends at Grid 21\n\nRetrieved 5 similar general mobility (may include walking, public transport, taxi, etc.) patterns:\n\n1. Grid 21: 5 occurrences, distance 0.20 km, similarity -inf, area type: Dining & Cusine, Life Services, time patterns: 6:00-6:00, days: Thursday\n\nYou must respond with ONLY a valid JSON object in this exact format (no additional text, explanations, or markdown):\n\n{\n  "next_locations": [\n    {\n      "grid_id": <grid_id>,\n      "frequency": <number>,\n      "distance_km": <number>,\n      "area_type": "<poi_types or \'N/A\'>",\n      "reason": "<concise reason why this location is likely>"\n    }\n  ],\n  "spatial_patterns": "<describe distance trends and area characteristics in 1-2 sentences>",\n  "temporal_patterns": "<describe time patterns in 1-2 sentences, or \'No clear temporal pattern\'>"\n}\n\nInclude top 3-5 next locations. Keep total response under 200 words."，结果LLM却一直输出感叹号。可是detailed_trainer.py脚本中使用的是同样的prompt，却没有问题。我觉得可能是trainer.py脚本中对LLM的调用方式有问题，导致LLM无法正确理解和回答prompt。我希望你能帮我找出trainer.py脚本中对LLM调用的bug，并进行修复。## 任务
+现在我在测试整个trainer.py脚本的过程中，发现LLM输出Rag_summary时出现异常。训练时第一个sample是正常的，但是第二个sample，synthesis_prompt="Analyze the following mobility patterns and provide a structured summary in JSON format.\n\nQuery trajectory ends at Grid 21\n\nRetrieved 5 similar general mobility (may include walking, public transport, taxi, etc.) patterns:\n\n1. Grid 21: 5 occurrences, distance 0.20 km, similarity -inf, area type: Dining & Cuisine, Life Services, time patterns: 6:00-6:00, days: Thursday\n\nYou must respond with ONLY a valid JSON object in this exact format (no additional text, explanations, or markdown):\n\n{\n  "next_locations": [\n    {\n      "grid_id": <grid_id>,\n      "frequency": <number>,\n      "distance_km": <number>,\n      "area_type": "<poi_types or \'N/A\'>",\n      "reason": "<concise reason why this location is likely>"\n    }\n  ],\n  "spatial_patterns": "<describe distance trends and area characteristics in 1-2 sentences>",\n  "temporal_patterns": "<describe time patterns in 1-2 sentences, or \'No clear temporal pattern\'>"\n}\n\nInclude top 3-5 next locations. Keep total response under 200 words."，结果LLM却一直输出感叹号。可是detailed_trainer.py脚本中使用的是同样的prompt，却没有问题。我觉得可能是trainer.py脚本中对LLM的调用方式有问题，导致LLM无法正确理解和回答prompt。我希望你能帮我找出trainer.py脚本中对LLM调用的bug，并进行修复。## 任务
 请完成以下任务：
 1. **BUG修复**：
    - 检查trainer.py脚本中对LLM的调用方式，找出可能导致LLM无法正确理解和回答prompt的bug。
@@ -612,7 +641,6 @@ Transportation Facilities: Grid 1176, 0.20km | Grid 1136, 0.44km | Grid 1177, 0.
 ## 输出格式
 - 提交修改后的MobilityPredictor.py脚本文件。
 - 脚本中，包括最终推理Prompt优化的实现。
-
 ---
 # 代码精简优化
 # Prompt_6.1[代码精简优化]

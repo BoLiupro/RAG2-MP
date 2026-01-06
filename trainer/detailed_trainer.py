@@ -117,6 +117,13 @@ class DetailedMobilityTrainer:
             gravity_weight = model_config['gravity']['weight']
             gravity_radius = model_config['gravity']['radius']
             top_k_predictions = model_config['prediction']['top_k_predictions']
+            prediction_time_interval = model_config['prediction'].get('time_interval', '1 hour')
+            # Generation parameters
+            temperature = model_config['llm'].get('temperature', 0.2)
+            top_p = model_config['llm'].get('top_p', 0.8)
+            top_k = model_config['llm'].get('top_k', 40)
+            do_sample = model_config['llm'].get('do_sample', True)
+            max_new_tokens = model_config['llm'].get('max_new_tokens', 256)
         else:  # Old format
             llm_model_name = model_config['llm_model_name']
             llm_model_path = model_config['llm_model_path']
@@ -126,11 +133,19 @@ class DetailedMobilityTrainer:
             gravity_weight = model_config['gravity_weight']
             gravity_radius = model_config['gravity_radius']
             top_k_predictions = model_config['top_k_predictions']
+            prediction_time_interval = '1 hour'
+            # Default generation parameters for old format
+            temperature = 0.2
+            top_p = 0.8
+            top_k = 40
+            do_sample = True
+            max_new_tokens = 256
         
         self.log(f"  LLM Model: {llm_model_name}")
         self.log(f"  RAG Top-M Samples: {rag_top_m_samples}")
         self.log(f"  Gravity Top-N Candidates: {gravity_top_n_candidates}")
         self.log(f"  Prediction Top-K: {top_k_predictions}")
+        self.log(f"  Prediction Time Interval: {prediction_time_interval}")
         
         self.predictor = MobilityPredictor(
             llm_model_name=llm_model_name,
@@ -142,7 +157,15 @@ class DetailedMobilityTrainer:
             gravity_weight=gravity_weight,
             gravity_radius=gravity_radius,
             use_quantization=use_quantization,
-            verbose=True  # Enable verbose for debugging
+            verbose=True,  # Enable verbose for debugging
+            # Pass generation parameters
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            do_sample=do_sample,
+            max_new_tokens=max_new_tokens,
+            # Pass prediction parameters
+            prediction_time_interval=prediction_time_interval
         )
         
         self.log("Model initialized successfully\n")

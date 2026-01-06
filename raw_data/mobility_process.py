@@ -81,7 +81,7 @@ class MobilityProcessor:
                  grid_size: int = 40, time_interval_hours: float = 0.5,
                  obs_len: int = 12, pred_len: int = 1,
                  split_ratios: List[float] = [0.4, 0.4, 0.1, 0.1],
-                 sample_ratio: float = 1.0):
+                 max_days: int = None):
         self.city_name = city_name
         self.bbox = bbox
         self.grid_size = grid_size
@@ -89,7 +89,7 @@ class MobilityProcessor:
         self.obs_len = obs_len
         self.pred_len = pred_len
         self.split_ratios = split_ratios  # [rag, train, val, test]
-        self.sample_ratio = sample_ratio  # 采样比例
+        self.max_days = max_days  # 限制处理的天数
         
     def process_nanchang(self, data_dir: str) -> pd.DataFrame:
         print("正在处理南昌数据...")
@@ -326,10 +326,9 @@ class MobilityProcessor:
             
             # 准备输出数据
             out_data = resampled[['user_id', 'location_id', 'timestamp_str']].reset_index()
-            out_data.rename(columns={'index': 'timestamp'}, inplace=True)
-            # timestamp 列现在是 datetime，我们需要 timestamp_str 作为输出的 timestamp
-            out_data = out_data[['user_id', 'timestamp_str', 'location_id']]
-            out_data.columns = ['user_id', 'timestamp', 'location_id']
+            out_data.rename(columns={'index': 'timestamp_dt'}, inplace=True)
+            # 保留datetime列用于后续排序，timestamp_str用于输出
+            out_data = out_data[['user_id', 'timestamp_dt', 'timestamp_str', 'location_id']]
             
             if uid in rag_users:
                 rag_samples.append(out_data)
@@ -339,50 +338,61 @@ class MobilityProcessor:
                 val_samples.append(out_data)
             elif uid in test_users:
                 test_samples.append(out_data)
-                
+        
+        # 合并并排序数据 - 确保时间连续性
+        print("\n合并并排序数据...")
+        
+        def finalize_dataset(samples):
+            if not samples:
+                return pd.DataFrame()
+            df = pd.concat(samples, ignore_index=True)
+            # 按用户ID和时间戳排序，确保每个用户的轨迹是时间连续的
+            df = df.sort_values(['user_id', 'timestamp_dt'])
+            # 只保留需要的列用于输出
+            df = df[['user_id', 'timestamp_str', 'location_id']].rename(columns={'timestamp_str': 'timestamp'})
+            return df
+        
         return (
-            pd.concat(rag_samples) if rag_samples else pd.DataFrame(),
-            pd.concat(train_samples) if train_samples else pd.DataFrame(),
-            pd.concat(val_samples) if val_samples else pd.DataFrame(),
-            pd.concat(test_samples) if test_samples else pd.DataFrame()
+            finalize_dataset(rag_samples),
+            finalize_dataset(train_samples),
+            finalize_dataset(val_samples),
+            finalize_dataset(test_samples)
         )
     
-    def sample_dataset(self, df: pd.DataFrame, dataset_name: str) -> pd.DataFrame:
+    def filter_by_days(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        对数据集进行随机采样，确保覆盖尽可能多的不同用户
+        按天数过滤数据，保留最近的N天数据
         
         Args:
-            df: 输入数据集
-            dataset_name: 数据集名称(用于打印信息)
+            df: 输入数据集（必须包含timestamp列）
             
         Returns:
-            采样后的数据集
+            过滤后的数据集
         """
-        if df.empty or self.sample_ratio >= 1.0:
+        if df.empty or self.max_days is None:
             return df
             
-        print(f"对{dataset_name}数据集进行随机采样 (采样比例: {self.sample_ratio*100:.1f}%)...")
+        print(f"\n按天数过滤数据 (保留最近 {self.max_days} 天)...")
         
-        # 按用户分组，对每个用户的样本进行采样
-        # 这样可以确保数据覆盖尽可能多的不同用户
-        sampled_groups = []
-        for uid, group in df.groupby('user_id'):
-            n_samples = max(1, int(len(group) * self.sample_ratio))  # 至少保留1条
-            sampled = group.sample(n=n_samples, random_state=42)
-            sampled_groups.append(sampled)
+        # 找到最大日期
+        max_date = df['timestamp'].max()
+        # 计算截止日期
+        cutoff_date = max_date - timedelta(days=self.max_days)
         
-        sampled_df = pd.concat(sampled_groups, ignore_index=True)
+        # 过滤数据
+        filtered_df = df[df['timestamp'] >= cutoff_date].copy()
         
         original_records = len(df)
-        sampled_records = len(sampled_df)
-        original_users = df['user_id'].nunique()
-        sampled_users = sampled_df['user_id'].nunique()
+        filtered_records = len(filtered_df)
+        original_date_range = (df['timestamp'].max() - df['timestamp'].min()).days
+        filtered_date_range = (filtered_df['timestamp'].max() - filtered_df['timestamp'].min()).days
         
-        print(f"  {dataset_name}: {original_records:,} -> {sampled_records:,} 条记录 "
-              f"({sampled_records/original_records*100:.1f}%), "
-              f"保留 {sampled_users}/{original_users} 用户 ({sampled_users/original_users*100:.1f}%)")
+        print(f"  原始数据: {original_records:,} 条记录, 时间跨度: {original_date_range} 天")
+        print(f"  过滤后: {filtered_records:,} 条记录 ({filtered_records/original_records*100:.1f}%), "
+              f"时间跨度: {filtered_date_range} 天")
+        print(f"  日期范围: {filtered_df['timestamp'].min()} 至 {filtered_df['timestamp'].max()}")
         
-        return sampled_df
+        return filtered_df
 
 def main():
     parser = argparse.ArgumentParser(description='出行轨迹数据处理脚本')
@@ -391,17 +401,17 @@ def main():
                         help='要处理的城市')
     parser.add_argument('--data_dir', type=str, default='.',
                         help='数据目录路径')
-    parser.add_argument('--interval', type=float, default=0.5,
+    parser.add_argument('--interval', type=float, default=1,
                         help='时间间隔(小时)，如0.25(15分钟), 0.5(30分钟), 1.0(60分钟)')
     parser.add_argument('--obs_len', type=int, default=12,
                         help='观察长度')
     parser.add_argument('--pred_len', type=int, default=1,
                         help='预测长度')
     parser.add_argument('--split_ratios', type=float, nargs=4, 
-                        default=[0.4, 0.4, 0.1, 0.1],
-                        help='数据集划分比例 [rag, train, val, test], 默认: 0.4 0.4 0.1 0.1')
-    parser.add_argument('--sample_ratio', type=float, default=1.0,
-                        help='采样比例 (0-1)，默认1.0表示不采样')
+                        default=[0.45, 0.45, 0.05, 0.05],
+                        help='数据集划分比例 [rag, train, val, test], 默认: 0.45 0.45 0.05 0.05')
+    parser.add_argument('--max_days', type=int, default=7,
+                        help='限制处理的天数（保留最近N天数据），默认None表示处理所有天数')
     
     args = parser.parse_args()
     
@@ -409,9 +419,9 @@ def main():
     if abs(sum(args.split_ratios) - 1.0) > 0.01:
         raise ValueError(f"split_ratios的总和必须为1.0，当前为{sum(args.split_ratios)}")
     
-    # 验证sample_ratio在合理范围内
-    if not 0 < args.sample_ratio <= 1.0:
-        raise ValueError(f"sample_ratio必须在(0, 1]范围内，当前为{args.sample_ratio}")
+    # 验证max_days
+    if args.max_days is not None and args.max_days <= 0:
+        raise ValueError(f"max_days必须大于0，当前为{args.max_days}")
     
     # 城市配置
     CITY_CONFIGS = {
@@ -439,7 +449,7 @@ def main():
         obs_len=args.obs_len,
         pred_len=args.pred_len,
         split_ratios=args.split_ratios,
-        sample_ratio=args.sample_ratio
+        max_days=args.max_days
     )
     
     # 1. 加载数据
@@ -449,19 +459,19 @@ def main():
         df = processor.process_beijing(data_path)
     else:
         df = processor.process_shenzhen(data_path)
+    
+    # 2. 按天数过滤数据（如果指定了max_days）
+    if args.max_days is not None:
+        df = processor.filter_by_days(df)
         
-    # 2. 处理数据 (离散化和数据集划分)
+    # 3. 处理数据 (离散化和数据集划分)
     rag_df, train_df, val_df, test_df = processor.discretize_and_sample(df)
     
-    # 3. 对每个数据集进行采样
-    print("\n开始对数据集进行采样...")
-    rag_df = processor.sample_dataset(rag_df, "RAG")
-    train_df = processor.sample_dataset(train_df, "Train")
-    val_df = processor.sample_dataset(val_df, "Val")
-    test_df = processor.sample_dataset(test_df, "Test")
-    
     # 4. 保存结果到 data/{city} 目录
-    output_dir = os.path.join(os.path.dirname(args.data_dir), 'data', args.city)
+    # 计算正确的输出目录：从raw_data目录回到项目根目录，然后进入data/{city}
+    script_dir = os.path.dirname(os.path.abspath(__file__))  # raw_data目录
+    project_root = os.path.dirname(script_dir)  # 项目根目录
+    output_dir = os.path.join(project_root, 'data', args.city)
     os.makedirs(output_dir, exist_ok=True)
     
     print(f"\n保存结果到 {output_dir} ...")
@@ -539,14 +549,14 @@ def main():
     print(f"  实际比例(记录): {rag_records/total_records*100:.1f}% : {train_records/total_records*100:.1f}% : "
           f"{val_records/total_records*100:.1f}% : {test_records/total_records*100:.1f}%")
     
-    # 5.6 采样比例统计
-    if args.sample_ratio < 1.0:
-        print(f"\n[采样统计]")
-        print(f"  采样比例: {args.sample_ratio*100:.1f}%")
-        print(f"  采样后总记录数: {total_records:,}")
+    # 5.6 天数过滤统计
+    if args.max_days is not None:
+        print(f"\n[天数过滤统计]")
+        print(f"  限制天数: {args.max_days} 天")
+        print(f"  过滤后总记录数: {total_records:,}")
     else:
-        print(f"\n[采样统计]")
-        print(f"  未进行采样 (sample_ratio = 1.0)")
+        print(f"\n[天数过滤统计]")
+        print(f"  未进行天数过滤 (max_days = None)")
     
     print(f"\n{'='*70}")
     print("处理完成！")
