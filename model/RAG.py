@@ -343,58 +343,79 @@ class MobilityRAG:
         
         # Prepare context for LLM
         context_lines = []
-        context_lines.append(f"Query trajectory ends at Grid {current_loc}")
-        context_lines.append(f"\nRetrieved {len(similar_samples)} similar {mobility_mode} patterns:")
+        # context_lines.append(f"Query trajectory ends at Grid {current_loc}")
+        # context_lines.append(f"\nRetrieved {len(similar_samples)} similar {mobility_mode} patterns:")
         
         for i, stat in enumerate(location_stats, 1):
-            line = f"\n{i}. Grid {stat['grid_id']}: "
+            # line = f"\n{i}. Grid {stat['grid_id']}: "
             # line += f"{stat['frequency']} occurrences, "
             # Pass the list of distances to LLM
-            dist_str = ", ".join([f"{d:.2f}" for d in stat['distances']])
-            line += f"distances [{dist_str}] km, "
+
             # line += f"similarity {stat['avg_similarity']:.3f}"
             
+            line_parts = []
             if stat['poi_types']:
-                line += f", area type: {', '.join(stat['poi_types'])}"
+                poi_str = ", ".join(stat['poi_types'])
+                line_parts.append(f"The area type of next location is {poi_str}. ")
+            else:
+                line_parts.append("The area type of next location is unknown. ")
             
-            if stat['timestamps']:
-                # Analyze time patterns
-                try:
-                    from datetime import datetime
-                    hours = []
-                    weekdays = []
-                    for ts in stat['timestamps'][:3]:  # Sample first 3
-                        dt = datetime.strptime(ts, '%Y%m%d %H:%M')
-                        hours.append(dt.hour)
-                        weekdays.append(dt.strftime('%A'))
-                    if hours:
-                        line += f", time patterns: {hours[0]}:00-{hours[-1]}:00"
-                    if weekdays:
-                        line += f", days: {', '.join(set(weekdays))}"
-                except:
-                    pass
+            if stat['distances']:
+                dist_str = [f"{d:.2f}" for d in stat['distances']]
+                line_parts.append(f"the distance from last location to next location is {dist_str} km")
+            else:
+                line_parts.append("the distance from last location to next location is unknown")
+
+            line = " and ".join(line_parts)
+
+            # if stat['timestamps']:
+            #     # Analyze time patterns
+            #     try:
+            #         from datetime import datetime
+            #         hours = []
+            #         weekdays = []
+            #         for ts in stat['timestamps'][:3]:  # Sample first 3
+            #             dt = datetime.strptime(ts, '%Y%m%d %H:%M')
+            #             hours.append(dt.hour)
+            #             weekdays.append(dt.strftime('%A'))
+            #         if hours:
+            #             line += f", time patterns: {hours[0]}:00-{hours[-1]}:00"
+            #         if weekdays:
+            #             line += f", days: {', '.join(set(weekdays))}"
+            #     except:
+            #         pass
             
             context_lines.append(line)
         
         context = "\n".join(context_lines)
         
         # New structured synthesis prompt with enhanced JSON format requirement
-        synthesis_prompt = f"""Analyze the following mobility patterns and provide a structured summary in JSON format.
-        Summarize the average distance from previous locations, 2-3 possible poi categories of next locations,
-        analyze spatial patterns such as distance trends and area characteristics in 4-5 sentences, 
-        and describe time patterns such as when the movement happens in 3 sentences, or 'No clear temporal pattern' .
-        These are mobility trajectories that are semantically similar to a query trajectory:
+        synthesis_prompt = f"""You are given information about historical mobility trajectories that are semantically similar to a query trajectory.
+Each line describes the characteristics of the next location in those trajectories.
 
+Your task is to extract and summarize the information below and return a SINGLE JSON object.
+
+Definitions:
+- avg_distance_from_previous_location_km: the average distance (in km) from the previous location to the next location.
+- category_of_next_location: 2 to 3 most frequent POI categories of next locations, joined by commas.
+- spatial_patterns: describe spatial and POI transition patterns in 3–4 complete sentences.
+- move_or_stay: describe whether similar trajectories tend to stay at the current location or move to a different location, in 2–3 sentences.
+
+Input information:(0.00 km indicates no movement (stay at current location))
 {context}
 
-Output format (JSON):
+Output requirements:
+- Output ONLY a valid JSON object.
+- Do NOT include explanations, markdown, or extra text.
+- Use plain text for all string values.
+
+Output format:
 {{
   "avg_distance_from_previous_location_km": <number>,
   "category_of_next_location": "<text>",
   "spatial_patterns": "<text>",
-  "temporal_patterns": "<text>"
+  "move_or_stay": "<text>"
 }}
-Output only json, no explanation.
 """
         
         if print_prompt:
@@ -414,6 +435,11 @@ Output only json, no explanation.
                 top_p=self.top_p  # Use config parameter
             )
             
+            if llm_response.startswith(synthesis_prompt):
+                response = llm_response[len(synthesis_prompt):].strip()
+            else:
+                response = llm_response.strip()
+
             # Clean up the response
             llm_response = llm_response.strip()
             
@@ -468,7 +494,8 @@ Output only json, no explanation.
         elif '<think>' in llm_response:
             # If there's an opening tag but no closing tag, try to remove the tag itself
             llm_response = llm_response.replace('<think>', '')
-        
+    
+
         # Step 2: Remove markdown code blocks if present
         llm_response = re.sub(r'\n\n```json\s*', '', llm_response)
         llm_response = re.sub(r'\n```\s*', '', llm_response)
@@ -508,7 +535,7 @@ Output only json, no explanation.
                 raise ValueError(f"Failed to parse JSON: {e}")
         
         # Step 6: Validate required fields (updated for new format)
-        required_fields = ['avg_distance_from_previous_location_km','category_of_next_location', 'spatial_patterns', 'temporal_patterns']
+        required_fields = ['avg_distance_from_previous_location_km','category_of_next_location', 'spatial_patterns', 'move_or_stay']
         for field in required_fields:
             if field not in summary_json:
                 # Check if it's a typo or optional

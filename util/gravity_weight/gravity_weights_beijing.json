@@ -1,0 +1,41 @@
+{
+  "city": "beijing",
+  "weights": {
+    "Transportation Facilities_count": 1.0,
+    "Leisure & Entertainment_count": 1.0,
+    "Companies & Enterprises_count": 1.0,
+    "Healthcare_count": 1.0,
+    "Residential_count": 1.0,
+    "Tourist Attractions_count": 1.0,
+    "Automotive_count": 1.0,
+    "Life Services_count": 1.0,
+    "Science & Education & Culture_count": 1.0,
+    "Shopping & Consumer Goods_count": 1.0,
+    "Sports & Fitness_count": 1.0,
+    "Hotels & Accommodations_count": 1.0,
+    "Financial Institutions_count": 1.0,
+    "Dining & Cuisine_count": 1.0
+  },
+  "evaluation": {
+    "Transportation Facilities_count": 57.128571428571426,
+    "Leisure & Entertainment_count": 89.25714285714285,
+    "Companies & Enterprises_count": 80.21428571428571,
+    "Healthcare_count": 76.0,
+    "Residential_count": 70.35714285714286,
+    "Tourist Attractions_count": 98.25714285714285,
+    "Automotive_count": 101.58571428571429,
+    "Life Services_count": 62.47142857142857,
+    "Science & Education & Culture_count": 64.1,
+    "Shopping & Consumer Goods_count": 56.74285714285714,
+    "Sports & Fitness_count": 99.81428571428572,
+    "Hotels & Accommodations_count": 81.04285714285714,
+    "Financial Institutions_count": 69.71428571428571,
+    "Dining & Cuisine_count": 64.95714285714286
+  },
+  "metadata": {
+    "obs_len": 12,
+    "radius": 10,
+    "num_samples": 4470,
+    "num_training_records": 41982
+  }
+}

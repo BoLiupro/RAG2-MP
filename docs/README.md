@@ -1,5 +1,6 @@
 # China_Journal Mobility Prediction
 ---
+
 # 数据集
 1. 原始数据(Raw)收集：
    1. mobility：南昌app（202205）、[上海信令(2024)](https://wangshangguang.github.io/telecom_dataset//)、深圳私家车(202207)
@@ -619,7 +620,7 @@ Rules:
 - 脚本中，包括最终推理Prompt精简的实现。  
 ---
 # Prompt_5.3[最终推理Prompt优化]
-# 背景
+## 背景
 最终推理的Prompt有点问题：
 1、任务的描述现在说的是“Predict the next most likely location based on the following information”，但是其实LLM并不能从任务描述中得知时间间隔，比如说是下一个小时、下两小时还是下半天。我觉得需要在任务描述中明确指出时间间隔，例如“Predict the next most likely location within the next 1 hour based on the following information”。这个时间间隔参数需要从config.yaml中传入。
 2、## Current Trajectory
@@ -642,8 +643,57 @@ Transportation Facilities: Grid 1176, 0.20km | Grid 1136, 0.44km | Grid 1177, 0.
 - 提交修改后的MobilityPredictor.py脚本文件。
 - 脚本中，包括最终推理Prompt优化的实现。
 ---
+# Prompt_5.4[最终推理PromptCurrentTrajectory返回格式优化]
+## 背景
+关于最终推理的prompt，我之前对轨迹做了一点提炼和简化，但我现在又觉得应该按照原来没有简化的版本，更详细地把轨迹信息展示出来。具体来说：
+Current Trajectory部分，还是按照原来的格式，把每个grid的出现次数和时间段都展示出来。因为这些信息对于LLM理解轨迹的功能属性和时间模式是有帮助的。可以参考这样的格式：Grid 804 (Shopping & Consumer Goods) ->0.20km->Grid 804 (Shopping & Consumer Goods) ->0.20km->Grid 804 (Shopping & Consumer Goods) ->0.20km->Grid 804 (Shopping & Consumer Goods) ->6.04km->Grid 1216 (Companies & Enterprises) ->0.20km->Grid 1216 (Companies & Enterprises) ->0.44km->Grid 1176 (Transportation Facilities) ->0.20km->Grid 1176 (Transportation Facilities) ->0.20km->Grid 1176 (Transportation Facilities) ->0.20km->Grid 1176 (Transportation Facilities) ->0.20km->Grid 1176 (Transportation Facilities) ->0.20km->Grid 1176 (Transportation Facilities)，但是每个poi展示两个类别，方便LLM理解这个位置的功能属性。
+## 任务
+请完成以下任务：
+1. **最终推理PromptCurrentTrajectory返回格式优化**：
+   - 修改MobilityPredictor.py脚本中的最终推理Prompt设计，按照上述要求进行优化。
+   - 确保修改后的Prompt能够引导LLM生成符合要求的最终预测回答。
+2. **测试修改**：
+   - 测试修改后的MobilityPredictor.py脚本，确保最终推理Prompt能够正确工作，并提升预测的准确性。
+## 约束
+- 使用Python编程语言。
+- 确保detailed_trainer.py可以够正确调用修改后的MobilityPredictor.py脚本进行测试。
+## 输出格式
+- 提交修改后的MobilityPredictor.py脚本文件。
+- 脚本中，包括最终推理PromptCurrentTrajectory返回格式优化的实现。
+---
+
+
+# 引力模型参数调整
+# Prompt_6.1[引力模型公式与参数调整]
+## 背景
+现在我已经完成了整个mobility prediction模型的训练流程，并且进行了测试。但是我觉得引力模型的公式和参数需要进行一些调整和优化，以提升模型的性能和预测的准确性。具体来说：
+1、我觉得引力模型的公式现在是 attractive score of poi category A=weight* num_of_poi_category_A_in_grid/Distance_from_current_Grid^2.但是我并不知道这个weight如何选择能够最好的反应真实的情况（步行轨迹和私家车出行轨迹可能不一样），可能需要根据数据集去拟合。
+2、为了避免某一个距离很小，导致score很大的情况，需要对分数做一个平滑，使得最后的分数落在0~1，保留三位小数。
+## 任务
+请完成以下任务：
+1. **引力参数拟合**
+   - 在find_gravity_weight.py脚本中，编写一个函数，用于根据训练集数据拟合引力模型中的weight参数。这个函数需要读取训练集数据，计算每个poi category在不同距离下的吸引力分数，然后通过最小化预测位置和真实位置之间的误差，来拟合出最优的weight参数。之后公式可能会为每一个poi category拟合出一个weight参数，之后计算引力分数时，使用对应类别的weight参数进行计算。
+2. **引力分数平滑**
+   - 修改Gravity.py脚本中的引力分数计算部分，添加一个平滑函数，将计算得到的引力分数进行平滑处理，使得最后的分数落在0~1之间，保留三位小数。
+3. **测试修改**
+   - 测试修改后的find_gravity_weight.py和Gravity.py脚本，确保引力模型的公式和参数调整能够正确工作，并提升预测的准确性。
+## 约束
+- 使用Python编程语言。
+- 保持原有脚本的结构和逻辑，尽量只修改必要的部分。
+- 拟合weight的过程中需要有适当的注释和过程打印。
+## 输出格式
+- 提交修改后的find_gravity_weight.py和Gravity.py脚本文件。
+- find_gravity_weight.py脚本中，包括引力参数拟合的实现。
+- Gravity.py脚本中，包括引力分数平滑的实现。
+- config.yaml中添加gravity_weight参数设置。
+---
+# Prompt_6.2[引力模型参数调整V2]
+fit_gravity_weight.py中，停留在自身原地的数据不参与拟合；2、在计算score的时候，停留在原地的需要特别处理，在util.py中将原地的distance改为视作0.01，但是计算score的时候不要“爆炸”，需要特别处理一下；3、weight保存的位置改在/workspace/China_Journal/util/gravity_weight 
+
+---
+
 # 代码精简优化
-# Prompt_6.1[代码精简优化]
+# Prompt_7.1[代码精简优化]
 ## 背景
 现在我已经完成了整个mobility prediction模型的训练流程，并且进行了测试。但是我觉得现在model模块的代码，特别是RAG.py,LLM.py,Gravity.py和Predictor.py脚本中，有一些重复的代码和不必要的复杂逻辑。我希望能够对这些代码进行精简和优化，使其更加简洁、高效和易于维护。很多包括了没有必要的布尔参数以及老版本遗留下来的选项接口。这样严重影响了代码的可读性和维护性。我希望你能帮我对这些代码进行精简和优化，去掉不必要的部分，保留核心功能。例如：
 config中不需要保留的参数：
@@ -670,9 +720,11 @@ gravity: include_current默认就是true，没有必要额外输入参数或者�
 - 提交修改后的RAG.py,LLM.py,Gravity.py和Predictor.py脚本文件。
 - 提交修改后的trainer.py和util.py脚本文件。
 ---
-# Prompt_6.2[代码精简优化V2]
+# Prompt_7.2[代码精简优化V2]
 ## 背景
 现在我已经完成了整个mobility prediction模型的训练流程，并且进行了测试。但是我觉得有的函数没有用到，可以删除。此外，我认为LLM.py中没有必要shenzhen数据集单独分出来一个出行的mode：        if city == 'shenzhen':
             mobility_mode = "private car mobility"
         else:
             mobility_mode = "general mobility"。
+---
+

@@ -43,7 +43,7 @@ model:
   # RAG (Retrieval-Augmented Generation) Configuration
   # ---------------------------------------------------------------------------
   rag:
-    top_m_samples: 5  # Number of similar historical samples to retrieve
+    top_m_samples: 10  # Number of similar historical samples to retrieve
     database_path: "/workspace/China_Journal/util/rag_database"  # RAG database directory
     max_summary_length: 256  # Maximum summary length in tokens
   
@@ -52,9 +52,12 @@ model:
   # ---------------------------------------------------------------------------
   gravity:
     top_n_candidates: 3  # Number of top candidates per POI category
-    weight: 1.0  # Weight parameter in gravity formula: score = weight * POI_count / distance^2
+    weight: 1.0  # Default weight parameter (used if no weight_config_path or category-specific weights)
     radius: 5  # Search radius in grid units
     grid_size: 40  # Grid system size (40x40 = 1600 grids)
+    weight_config_path: null  # Path to fitted weights JSON file (optional, e.g., "/workspace/China_Journal/util/gravity_weight/gravity_weights_beijing.json")
+    # If weight_config_path is provided and file exists, it will override the default weight parameter
+    # Fitted weights can be generated using: bash scripts/fit_gravity_weights.sh --city beijing
   
   # ---------------------------------------------------------------------------
   # Prediction Configuration

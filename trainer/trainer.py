@@ -108,6 +108,7 @@ class MobilityTrainer:
             gravity_top_n_candidates = model_config['gravity']['top_n_candidates']
             gravity_weight = model_config['gravity']['weight']
             gravity_radius = model_config['gravity']['radius']
+            gravity_weight_config_path = model_config['gravity'].get('weight_config_path', None)
             top_k_predictions = model_config['prediction']['top_k_predictions']
             prediction_time_interval = model_config['prediction'].get('time_interval', '1 hour')
             # Generation parameters
@@ -124,6 +125,7 @@ class MobilityTrainer:
             gravity_top_n_candidates = model_config['gravity_top_n_candidates']
             gravity_weight = model_config['gravity_weight']
             gravity_radius = model_config['gravity_radius']
+            gravity_weight_config_path = None
             top_k_predictions = model_config['top_k_predictions']
             prediction_time_interval = '1 hour'
             # Default generation parameters for old format
@@ -136,6 +138,8 @@ class MobilityTrainer:
         self.log(f"  LLM Model: {llm_model_name}")
         self.log(f"  RAG Top-M Samples: {rag_top_m_samples}")
         self.log(f"  Gravity Top-N Candidates: {gravity_top_n_candidates}")
+        self.log(f"  Gravity Weight: {gravity_weight}")
+        self.log(f"  Gravity Weight Config: {gravity_weight_config_path if gravity_weight_config_path else 'None (using default)'}")
         self.log(f"  Prediction Top-K: {top_k_predictions}")
         self.log(f"  Prediction Time Interval: {prediction_time_interval}")
         self.log(f"  Generation params: temperature={temperature}, top_p={top_p}, top_k={top_k}, do_sample={do_sample}")
@@ -149,6 +153,7 @@ class MobilityTrainer:
             gravity_top_n_candidates=gravity_top_n_candidates,
             gravity_weight=gravity_weight,
             gravity_radius=gravity_radius,
+            gravity_weight_config_path=gravity_weight_config_path,
             use_quantization=use_quantization,
             verbose=False,  # Disable verbose during training
             # Pass generation parameters

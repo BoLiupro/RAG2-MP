@@ -35,6 +35,7 @@ class MobilityPredictor:
         gravity_top_n_candidates: int = 5,
         gravity_weight: float = 1.0,
         gravity_radius: int = 10,
+        gravity_weight_config_path: str = None,
         use_quantization: bool = True,
         use_lora: bool = False,
         verbose: bool = True,
@@ -58,8 +59,9 @@ class MobilityPredictor:
             top_k_predictions: Number of top predictions to return
             rag_top_m_samples: Number of similar samples to retrieve (RAG)
             gravity_top_n_candidates: Number of candidates per POI category (Gravity)
-            gravity_weight: Weight parameter for gravity model
+            gravity_weight: Weight parameter for gravity model (default if no config)
             gravity_radius: Search radius for gravity model (in grid units)
+            gravity_weight_config_path: Path to fitted weights JSON (optional)
             use_quantization: Whether to use 4-bit quantization for LLM
             use_lora: Whether to use LoRA fine-tuning
             verbose: If True, print prompts and intermediate results
@@ -118,7 +120,8 @@ class MobilityPredictor:
             city=city,
             weight=gravity_weight,
             gravity_top_n_candidates=gravity_top_n_candidates,
-            radius=gravity_radius
+            radius=gravity_radius,
+            weight_config_path=gravity_weight_config_path
         )
     
     def predict(
@@ -318,109 +321,67 @@ class MobilityPredictor:
     
     def _format_trajectory_compact(self, observation_trajectory: List[Dict[str, Any]]) -> str:
         """
-        Format trajectory in a compact, structured format.
-        - 连续相同 grid 合并，显示停留次数和时间段
-        - 显示每段的时间信息
-        - 显示区间距离和 area type
+        Format trajectory showing all steps with distances and top 2 POI categories.
+        This detailed format helps LLM understand functional attributes and temporal patterns.
+        
+        Format: Grid 804 (Shopping & Consumer Goods, Life Services) ->0.20km-> Grid 804 (Shopping & Consumer Goods, Life Services) ->6.04km-> Grid 1216 (Companies & Enterprises, Residential)...
         
         Args:
-            observation_trajectory: List of trajectory points, 每个点需有 'location_id' 和 'timestamp'
+            observation_trajectory: List of trajectory points with 'location_id' and 'timestamp'
         Returns:
-            Compact formatted trajectory string
+            Detailed trajectory string with all steps, distances, and top 2 POI categories
         """
         if not observation_trajectory:
             return "Empty trajectory"
 
         from util.utils import calculate_grid_distance
-        import datetime
 
         # Get POI data for area type information
         poi_data = self.rag.poi_data if hasattr(self.rag, 'poi_data') and self.rag.poi_data else {}
 
-        def get_area_types(loc_id, top_n=2):
-            """Get top N area types for a location"""
+        def get_top_2_area_types(loc_id):
+            """Get top 2 area types for a location"""
             if loc_id not in poi_data:
                 return "Mixed"
             
             poi_features = poi_data[loc_id]
             # Get all POI types with their percentages
-            # Note: RAG.poi_data keys are already stripped of '_percentage' suffix
             poi_list = [(poi_type.replace('_', ' ').strip(), pct) 
                        for poi_type, pct in poi_features.items() if pct > 0]
             
             # Sort by percentage descending
             poi_list.sort(key=lambda x: x[1], reverse=True)
             
-            # Get top N types with percentage > 0
-            top_types = [name for name, pct in poi_list[:top_n]]
+            # Get top 2 types
+            top_2 = [name for name, pct in poi_list[:2]]
             
-            if not top_types:
+            if not top_2:
                 return "Mixed"
-            elif len(top_types) == 1:
-                return top_types[0]
+            elif len(top_2) == 1:
+                return top_2[0]
             else:
-                return " & ".join(top_types)
+                return ", ".join(top_2)
 
-        # 合并连续相同 grid
-        merged = []  # 每项: {loc_id, start_idx, end_idx, count, start_time, end_time}
-        prev_loc = None
-        for i, point in enumerate(observation_trajectory):
-            loc_id = point['location_id']
-            timestamp = point.get('timestamp', None)
-            if prev_loc is not None and loc_id == prev_loc['loc_id']:
-                prev_loc['end_idx'] = i
-                prev_loc['count'] += 1
-                prev_loc['end_time'] = timestamp
-            else:
-                prev_loc = {
-                    'loc_id': loc_id,
-                    'start_idx': i,
-                    'end_idx': i,
-                    'count': 1,
-                    'start_time': timestamp,
-                    'end_time': timestamp
-                }
-                merged.append(prev_loc)
-
-        # 格式化时间
-        def fmt_time(ts):
-            if ts is None:
-                return "?"
-            try:
-                # 支持 int/float 时间戳或字符串
-                if isinstance(ts, (int, float)):
-                    return datetime.datetime.fromtimestamp(ts).strftime("%H:%M")
-                elif isinstance(ts, str):
-                    # 尝试直接取时分
-                    if len(ts) >= 16 and ts[4] == '-' and ts[7] == '-':
-                        # 2022-01-01 08:00:00
-                        return ts[11:16]
-                    elif len(ts) >= 5 and ts[2] == ':' and ts[0].isdigit():
-                        return ts[:5]
-                    else:
-                        return ts
-                else:
-                    return str(ts)
-            except Exception:
-                return str(ts)
-
+        # Format each step in the trajectory
         formatted_parts = []
-        for idx, seg in enumerate(merged):
-            loc_id = seg['loc_id']
-            area_types = get_area_types(loc_id, top_n=2)
-            start_time = fmt_time(seg['start_time'])
-            end_time = fmt_time(seg['end_time'])
-            time_str = f"[{start_time}~{end_time}]" if start_time != end_time else f"[{start_time}]"
-            part = f"Grid {loc_id} ({area_types}) {time_str}"
-            if idx > 0:
-                # 计算距离
-                prev_loc_id = merged[idx-1]['loc_id']
-                dist = calculate_grid_distance(prev_loc_id, loc_id, self.city, 40)
-                formatted_parts.append(f"->{dist:.2f}km->" + part)
+        
+        for idx, point in enumerate(observation_trajectory):
+            loc_id = point['location_id']
+            area_types = get_top_2_area_types(loc_id)
+            
+            # Format this grid
+            grid_str = f"Grid {loc_id} ({area_types})"
+            
+            if idx == 0:
+                # First grid, no distance prefix
+                formatted_parts.append(grid_str)
             else:
-                formatted_parts.append(part)
+                # Calculate distance from previous grid
+                prev_loc_id = observation_trajectory[idx - 1]['location_id']
+                dist = calculate_grid_distance(prev_loc_id, loc_id, self.city, 40)
+                formatted_parts.append(f" ->{dist:.2f}km-> {grid_str}")
 
-        return " ".join(formatted_parts)
+        return "".join(formatted_parts)
     
     def _format_candidates_compact(self, candidates_by_category: Dict[str, List[Tuple[int, float]]],
                                    current_location: int) -> str:
@@ -438,7 +399,7 @@ class MobilityPredictor:
         from util.utils import calculate_grid_distance
         
         formatted_lines = []
-        formatted_lines.append("Format: [Category]: [Grid ID] (Attractive Score), [Distance to current location]...")
+        formatted_lines.append("Format: [Category]: [Grid ID] (Attractive Score,0-1), [Distance to current location]...")
         formatted_lines.append("(Locations are ranked by attractiveness; higher scores indicate more likely destinations)")
         
         # Sort categories and process all of them
@@ -512,11 +473,11 @@ class MobilityPredictor:
         prompt += f"The user may stay at Grid {current_location} or move to a new location.\n"
         prompt += f"Predict the next most likely location within the next {self.prediction_time_interval} based on the following information:\n\n"
         
-        # Add compact trajectory format
+        # Add detailed trajectory format
         prompt += "## Current Trajectory\n"
-        prompt += "Format: Grid ID (Top 2 Area Types) [Time Range]\n"
-        compact_traj = self._format_trajectory_compact(observation_trajectory)
-        prompt += compact_traj + "\n\n"
+        prompt += "Format: Grid ID (Top 2 Area Types) with distances between consecutive locations\n"
+        detailed_traj = self._format_trajectory_compact(observation_trajectory)
+        prompt += detailed_traj + "\n\n"
         
         # Add RAG summary
         prompt += "## Feature of next location of similar group mobility\n"
@@ -524,7 +485,7 @@ class MobilityPredictor:
         
         # Add compact candidate locations
         prompt += "## Candidate Locations\n"
-        prompt += "(Current location included as a candidate for stationary behavior)\n\n"
+        prompt += "(Current location included as a candidate for stationary behavior)\n"
         compact_candidates = self._format_candidates_compact(candidates_by_category, current_location)
         prompt += compact_candidates + "\n"
 

@@ -8,8 +8,9 @@ Formula: score_of_poi_A = weight * (num of category A in target grid) / distance
 
 import pandas as pd
 import numpy as np
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Union
 import os
+import json
 from util.utils import calculate_grid_distance, grid_id_to_coordinates, coordinates_to_grid_id
 
 
@@ -23,10 +24,11 @@ class GravityModel:
         self,
         poi_data_path: str,
         city: str = 'beijing',
-        weight: float = 1.0,
+        weight: Union[float, Dict[str, float]] = 1.0,
         gravity_top_n_candidates: int = 5,
         radius: int = 10,
-        grid_size: int = 40
+        grid_size: int = 40,
+        weight_config_path: Optional[str] = None
     ):
         """
         Initialize the Gravity Model.
@@ -34,19 +36,18 @@ class GravityModel:
         Args:
             poi_data_path: Path to POI data CSV file (e.g., beijing_grid_poi.csv)
             city: City name ('beijing', 'nanchang', 'shenzhen')
-            weight: Weight parameter in gravity model formula
+            weight: Weight parameter(s) in gravity model formula.
+                   Can be a single float (same weight for all categories) or
+                   a dictionary mapping POI category to weight value.
             gravity_top_n_candidates: Number of top candidate locations to return for each POI category
             radius: Search radius (in grid units) around current location
             grid_size: Size of the grid system (default 40x40 = 1600 grids)
+            weight_config_path: Path to JSON file with fitted weights (optional)
         """
         self.city = city
-        self.weight = weight
         self.gravity_top_n_candidates = gravity_top_n_candidates
         self.radius = radius
         self.grid_size = grid_size
-        
-        # Load POI data
-        self.poi_data = self._load_poi_data(poi_data_path)
         
         # POI categories (14 categories) - with _count suffix
         self.poi_categories = [
@@ -66,7 +67,48 @@ class GravityModel:
             'Dining & Cuisine_count'
         ]
         
+        # Load POI data
         self.poi_data = self._load_poi_data(poi_data_path)
+        
+        # Initialize weights
+        self.weights = self._initialize_weights(weight, weight_config_path)
+        # Initialize weights
+        self.weights = self._initialize_weights(weight, weight_config_path)
+    
+    def _initialize_weights(
+        self,
+        weight: Union[float, Dict[str, float]],
+        weight_config_path: Optional[str]
+    ) -> Dict[str, float]:
+        """
+        Initialize weight parameters for each POI category.
+        
+        Priority:
+        1. If weight_config_path provided, load from JSON file
+        2. If weight is a dictionary, use it directly
+        3. If weight is a float, use same weight for all categories
+        
+        Args:
+            weight: Single weight or dictionary of weights
+            weight_config_path: Path to weight config JSON file
+        
+        Returns:
+            Dictionary mapping POI category to weight value
+        """
+        # Load from config file if provided
+        if weight_config_path and os.path.exists(weight_config_path):
+            print(f"Loading fitted weights from: {weight_config_path}")
+            with open(weight_config_path, 'r') as f:
+                config = json.load(f)
+                if 'weights' in config:
+                    return config['weights']
+        
+        # Use provided weights
+        if isinstance(weight, dict):
+            return weight
+        else:
+            # Use same weight for all categories
+            return {cat: weight for cat in self.poi_categories}
     
     def _load_poi_data(self, poi_data_path: str) -> pd.DataFrame:
         """
@@ -96,6 +138,47 @@ class GravityModel:
     def _calculate_distance(self, grid_id_1: int, grid_id_2: int) -> float:
         """Use utility function for distance calculation with haversine formula."""
         return calculate_grid_distance(grid_id_1, grid_id_2, city=self.city, grid_size=self.grid_size)
+    
+    def _smooth_base_score(self, base_score: float) -> float:
+        """
+        Smooth base gravity score using logarithmic transformation.
+        
+        This prevents extreme differences in raw poi_count/distance^2 values
+        from dominating the optimization. Uses log(1 + x) transformation.
+        
+        Args:
+            base_score: Raw base score (poi_count / distance^2)
+        
+        Returns:
+            Smoothed base score
+        """
+        if base_score <= 0:
+            return 0.0
+        # Use log(1 + x) to smooth the distribution
+        return np.log1p(base_score)
+    
+    def _smooth_score(self, score: float, scores_list: List[float]) -> float:
+        """
+        Normalize gravity score to [0, 1] range.
+        
+        Uses min-max normalization across all scores in the candidate set.
+        This is the final step after applying weights to smoothed base scores.
+        
+        Args:
+            score: Weighted gravity score
+            scores_list: List of all weighted scores for normalization
+        
+        Returns:
+            Normalized score in [0, 1] range, rounded to 3 decimal places
+        """
+        if len(scores_list) == 0 or max(scores_list) == min(scores_list):
+            return 0.0
+        
+        # Min-max normalization
+        normalized = (score - min(scores_list)) / (max(scores_list) - min(scores_list))
+        
+        # Round to 3 decimal places
+        return round(normalized, 3)
     
     def _get_grids_within_radius(self, current_grid_id: int) -> List[int]:
         """
@@ -135,7 +218,12 @@ class GravityModel:
         """
         Calculate gravity score for a target grid using the improved gravity model.
         
-        Formula: score = weight * (num_of_category_A_in_target_grid) / distance^2
+        Process:
+        1. Calculate base score: poi_count / distance^2
+        2. Apply logarithmic smoothing to base score
+        3. Multiply by category-specific weight
+        
+        Special handling for staying in place: uses a fixed moderate base score.
         
         Args:
             current_grid_id: Current location grid ID
@@ -143,8 +231,19 @@ class GravityModel:
             poi_category: POI category name
         
         Returns:
-            Gravity score
+            Weighted gravity score (after smoothing, before final normalization)
         """
+        # Get weight for this POI category
+        weight = self.weights.get(poi_category, 1.0)
+        
+        # Special case: staying in the same place
+        if current_grid_id == target_grid_id:
+            # Use a fixed moderate base score
+            # After log smoothing: log(1 + 10) ≈ 2.4
+            base_score = 10.0
+            smoothed_base = self._smooth_base_score(base_score)
+            return weight * smoothed_base
+        
         # Get POI data for the target grid
         poi_row = self.poi_data[self.poi_data['grid_id'] == target_grid_id]
         
@@ -157,11 +256,24 @@ class GravityModel:
         else:
             poi_count = 0
         
+        if poi_count == 0:
+            return 0.0
+        
         # Calculate distance
         distance = self._calculate_distance(current_grid_id, target_grid_id)
         
-        # Calculate gravity score using the improved formula
-        score = self.weight * poi_count / (distance ** 2)
+        # Avoid division by zero - set minimum distance
+        if distance < 0.01:  # Less than 10 meters
+            distance = 0.01
+        
+        # Step 1: Calculate base gravity score
+        base_score = poi_count / (distance ** 2)
+        
+        # Step 2: Apply logarithmic smoothing to avoid extreme values
+        smoothed_base = self._smooth_base_score(base_score)
+        
+        # Step 3: Apply category-specific weight
+        score = weight * smoothed_base
         
         return score
     
@@ -174,18 +286,19 @@ class GravityModel:
         Get candidate locations for each POI category using the gravity model.
         
         For each POI category, calculates gravity scores for all grids within radius,
-        then returns the top-n grids with highest scores.
+        applies smoothing to normalize scores to [0, 1], then returns the top-n grids.
         Always includes the current location as a candidate (for stationary behavior).
         
         Args:
             current_grid_id: Current location grid ID
-            return_scores: If True, return tuples of (grid_id, score); 
+            return_scores: If True, return tuples of (grid_id, smoothed_score); 
                           If False, return only grid_ids
         
         Returns:
             Dictionary mapping POI category to list of top-n candidates
             - If return_scores=False: {category: [grid_id1, grid_id2, ...]}
             - If return_scores=True: {category: [(grid_id1, score1), (grid_id2, score2), ...]}
+              where scores are smoothed to [0, 1] range
         """
         # Get all grids within the specified radius
         candidate_grids = self._get_grids_within_radius(current_grid_id)
@@ -196,7 +309,9 @@ class GravityModel:
         # For each POI category, calculate scores and select top-n
         for poi_category in self.poi_categories:
             scores = []
+            raw_scores_list = []
             
+            # Calculate raw scores for all candidates
             for target_grid_id in candidate_grids:
                 score = self._calculate_gravity_score(
                     current_grid_id,
@@ -204,15 +319,22 @@ class GravityModel:
                     poi_category
                 )
                 scores.append((target_grid_id, score))
+                raw_scores_list.append(score)
             
-            # Sort by score (descending)
-            scores.sort(key=lambda x: x[1], reverse=True)
+            # Apply smoothing to normalize scores to [0, 1]
+            smoothed_scores = []
+            for grid_id, raw_score in scores:
+                smoothed_score = self._smooth_score(raw_score, raw_scores_list)
+                smoothed_scores.append((grid_id, smoothed_score))
+            
+            # Sort by smoothed score (descending)
+            smoothed_scores.sort(key=lambda x: x[1], reverse=True)
             
             # Always ensure current location is included
             top_candidates = []
             current_included = False
             
-            for grid_id, score in scores:
+            for grid_id, score in smoothed_scores:
                 if grid_id == current_grid_id:
                     current_included = True
                 top_candidates.append((grid_id, score))
@@ -221,10 +343,11 @@ class GravityModel:
             
             # If current location wasn't in top-n, add it
             if not current_included:
-                current_score = self._calculate_gravity_score(
+                current_raw_score = self._calculate_gravity_score(
                     current_grid_id, current_grid_id, poi_category
                 )
-                top_candidates.append((current_grid_id, current_score))
+                current_smoothed_score = self._smooth_score(current_raw_score, raw_scores_list)
+                top_candidates.append((current_grid_id, current_smoothed_score))
             
             if return_scores:
                 candidates[poi_category] = top_candidates
@@ -317,7 +440,7 @@ class GravityModel:
         """
         return {
             'city': self.city,
-            'weight': self.weight,
+            'weights': self.weights,
             'gravity_top_n_candidates': self.gravity_top_n_candidates,
             'radius': self.radius,
             'grid_size': self.grid_size,
