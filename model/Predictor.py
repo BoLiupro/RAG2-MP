@@ -37,7 +37,13 @@ class MobilityPredictor:
         gravity_radius: int = 10,
         use_quantization: bool = True,
         use_lora: bool = False,
-        verbose: bool = True
+        verbose: bool = True,
+        # Generation parameters from config
+        temperature: float = 0.2,
+        top_p: float = 0.8,
+        top_k: int = 40,
+        do_sample: bool = True,
+        max_new_tokens: int = 256
     ):
         """
         Initialize the MobilityPredictor.
@@ -65,6 +71,13 @@ class MobilityPredictor:
         self.verbose = verbose
         self.num_grids = 1600  # Standard grid size for all cities
         
+        # Generation parameters
+        self.temperature = temperature
+        self.top_p = top_p
+        self.top_k = top_k
+        self.do_sample = do_sample
+        self.max_new_tokens = max_new_tokens
+        
         # Initialize LLM
         self.llm = MobilityLLM(
             model_name=llm_model_name,
@@ -79,7 +92,12 @@ class MobilityPredictor:
             rag_database_path=rag_database_path,
             rag_top_m_samples=rag_top_m_samples,
             city=city,
-            verbose=verbose
+            verbose=verbose,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            do_sample=do_sample,
+            max_new_tokens=max_new_tokens
         )
         
         # Load RAG database
@@ -219,18 +237,18 @@ class MobilityPredictor:
             with torch.no_grad():
                 outputs = self.llm.model.generate(
                     **inputs,
-                    max_new_tokens=256,
+                    max_new_tokens=self.max_new_tokens,
                     num_beams=self.top_k_predictions,
                     num_return_sequences=self.top_k_predictions,
-                    do_sample=True,  # Enable sampling within beam search
-                    temperature=0.7,  # Moderate temperature for diversity
-                    top_k=50,
-                    top_p=0.9,
-                    early_stopping=True,
-                    repetition_penalty=1.2,
-                    no_repeat_ngram_size=2,  # Prevent repeating 2-grams
+                    do_sample=self.do_sample,
+                    temperature=self.temperature,
+                    top_k=self.top_k,
+                    top_p=self.top_p,
+                    early_stopping=False,
+                    # repetition_penalty=1.2,
+                    # no_repeat_ngram_size=2,  # Prevent repeating 2-grams
                     pad_token_id=self.llm.tokenizer.pad_token_id,
-                    eos_token_id=self.llm.tokenizer.eos_token_id
+                    # eos_token_id=self.llm.tokenizer.eos_token_id
                 )
             
             # Decode all beam outputs
@@ -284,7 +302,7 @@ class MobilityPredictor:
         import re
         
         # Try pattern "Grid XXX"
-        match = re.search(r'Grid\s+(\d+)', response, re.IGNORECASE)
+        match = re.search(r'\n\nGrid\s+(\d+)', response, re.IGNORECASE)
         if match:
             return int(match.group(1))
         
@@ -298,51 +316,98 @@ class MobilityPredictor:
     def _format_trajectory_compact(self, observation_trajectory: List[Dict[str, Any]]) -> str:
         """
         Format trajectory in a compact, structured format.
-        Shows transitions with distances and area types.
-        Format: Grid ID (Area Type) distance → Grid ID (Area Type) distance
+        - 连续相同 grid 合并，显示停留次数和时间段
+        - 显示每段的时间信息
+        - 显示区间距离和 area type
         
         Args:
-            observation_trajectory: List of trajectory points
-        
+            observation_trajectory: List of trajectory points, 每个点需有 'location_id' 和 'timestamp'
         Returns:
             Compact formatted trajectory string
         """
         if not observation_trajectory:
             return "Empty trajectory"
-        
+
+        from util.utils import calculate_grid_distance
+        import datetime
+
         # Get POI data for area type information
         poi_data = self.rag.poi_data if hasattr(self.rag, 'poi_data') and self.rag.poi_data else {}
-        
-        formatted_parts = []
-        locations = [p['location_id'] for p in observation_trajectory]
-        
-        # Calculate distances between consecutive locations
-        from util.utils import calculate_grid_distance
-        
-        for i, point in enumerate(observation_trajectory):
-            loc_id = point['location_id']
-            
-            # Get dominant POI type for area description
+
+        def get_area_type(loc_id):
             area_type = "Mixed"
             if loc_id in poi_data:
                 poi_features = poi_data[loc_id]
-                # Find the POI category with highest percentage
                 max_pct = 0
                 for poi_type, pct in poi_features.items():
                     if pct > max_pct:
                         max_pct = pct
-                        # Clean up the POI type name
                         area_type = poi_type.replace('_count', '').replace('_', ' ').title()
-                        if max_pct < 20:  # If no dominant type
-                            area_type = "Mixed"
-            
-            # Calculate distance from previous location
-            if i == 0:
-                formatted_parts.append(f"Grid {loc_id} ({area_type})")
+                if max_pct < 20:
+                    area_type = "Mixed"
+            return area_type
+
+        # 合并连续相同 grid
+        merged = []  # 每项: {loc_id, start_idx, end_idx, count, start_time, end_time}
+        prev_loc = None
+        for i, point in enumerate(observation_trajectory):
+            loc_id = point['location_id']
+            timestamp = point.get('timestamp', None)
+            if prev_loc is not None and loc_id == prev_loc['loc_id']:
+                prev_loc['end_idx'] = i
+                prev_loc['count'] += 1
+                prev_loc['end_time'] = timestamp
             else:
-                dist = calculate_grid_distance(locations[i-1], loc_id, self.city, 40)
-                formatted_parts.append(f"->{dist:.2f}km->Grid {loc_id} ({area_type})")
-        
+                prev_loc = {
+                    'loc_id': loc_id,
+                    'start_idx': i,
+                    'end_idx': i,
+                    'count': 1,
+                    'start_time': timestamp,
+                    'end_time': timestamp
+                }
+                merged.append(prev_loc)
+
+        # 格式化时间
+        def fmt_time(ts):
+            if ts is None:
+                return "?"
+            try:
+                # 支持 int/float 时间戳或字符串
+                if isinstance(ts, (int, float)):
+                    return datetime.datetime.fromtimestamp(ts).strftime("%H:%M")
+                elif isinstance(ts, str):
+                    # 尝试直接取时分
+                    if len(ts) >= 16 and ts[4] == '-' and ts[7] == '-':
+                        # 2022-01-01 08:00:00
+                        return ts[11:16]
+                    elif len(ts) >= 5 and ts[2] == ':' and ts[0].isdigit():
+                        return ts[:5]
+                    else:
+                        return ts
+                else:
+                    return str(ts)
+            except Exception:
+                return str(ts)
+
+        formatted_parts = []
+        for idx, seg in enumerate(merged):
+            loc_id = seg['loc_id']
+            area_type = get_area_type(loc_id)
+            count = seg['count']
+            start_time = fmt_time(seg['start_time'])
+            end_time = fmt_time(seg['end_time'])
+            time_str = f"[{start_time}~{end_time}]" if start_time != end_time else f"[{start_time}]"
+            count_str = f" x{count}" if count > 1 else ""
+            part = f"Grid {loc_id} ({area_type}){count_str} {time_str}"
+            if idx > 0:
+                # 计算距离
+                prev_loc_id = merged[idx-1]['loc_id']
+                dist = calculate_grid_distance(prev_loc_id, loc_id, self.city, 40)
+                formatted_parts.append(f"->{dist:.2f}km->" + part)
+            else:
+                formatted_parts.append(part)
+
         return " ".join(formatted_parts)
     
     def _format_candidates_compact(self, candidates_by_category: Dict[str, List[Tuple[int, float]]],
@@ -430,11 +495,7 @@ class MobilityPredictor:
 - Do NOT explain.
 - Do NOT think aloud.
 - Do NOT output anything except the answer.
-- Output the answer in a JSON format.
-- Output format:
-{{
-  "Grid": <number>
-}}
+- Output the answer in this example format: Grid:21
 """
         prompt += f"## Your Task\n"
         prompt += f"You are a mobility prediction expert analyzing human mobility patterns.\n"

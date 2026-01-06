@@ -1,0 +1,199 @@
+[2026-01-06 13:18:35] Loading datasets...
+[2026-01-06 13:19:12] Train samples: 10
+[2026-01-06 13:19:12] Validation samples: 10
+[2026-01-06 13:19:12] Test samples: 10
+[2026-01-06 13:19:12] 
+Initializing MobilityPredictor model...
+[2026-01-06 13:19:12]   LLM Model: Gemma-2-9B
+[2026-01-06 13:19:12]   RAG Top-M Samples: 5
+[2026-01-06 13:19:12]   Gravity Top-N Candidates: 3
+[2026-01-06 13:19:12]   Prediction Top-K: 10
+[2026-01-06 13:19:31] Model initialized successfully
+
+[2026-01-06 13:19:31] 
+================================================================================
+[2026-01-06 13:19:31] STARTING DETAILED TESTING (DEBUG MODE)
+[2026-01-06 13:19:31] ================================================================================
+[2026-01-06 13:19:31] 
+Testing on 10 samples...
+
+[2026-01-06 13:19:31] 
+================================================================================
+[2026-01-06 13:19:31] DEBUGGING SAMPLE 1
+[2026-01-06 13:19:31] ================================================================================
+[2026-01-06 13:19:31] 
+📍 Observation Trajectory (12 points):
+[2026-01-06 13:19:31]   1. Location 804 at 20220708 08:30
+[2026-01-06 13:19:31]   2. Location 804 at 20220708 14:30
+[2026-01-06 13:19:31]   3. Location 804 at 20220708 20:30
+[2026-01-06 13:19:31]   4. Location 804 at 20220709 03:30
+[2026-01-06 13:19:31]   5. Location 1216 at 20220711 05:30
+[2026-01-06 13:19:31]   6. Location 1216 at 20220713 20:30
+[2026-01-06 13:19:31]   7. Location 1176 at 20220715 08:30
+[2026-01-06 13:19:31]   8. Location 1176 at 20220716 07:30
+[2026-01-06 13:19:31]   9. Location 1176 at 20220719 00:30
+[2026-01-06 13:19:31]   10. Location 1176 at 20220720 10:00
+[2026-01-06 13:19:31]   11. Location 1176 at 20220721 02:00
+[2026-01-06 13:19:31]   12. Location 1176 at 20220721 06:00
+[2026-01-06 13:19:31] 
+📍 Current Location: Grid 1176
+[2026-01-06 13:19:31] 🎯 Ground Truth Next Location: Grid 1176
+[2026-01-06 13:19:31] 
+--------------------------------------------------------------------------------
+[2026-01-06 13:19:31] STAGE 1: RAG RETRIEVAL
+[2026-01-06 13:19:31] --------------------------------------------------------------------------------
+[2026-01-06 13:19:40] 
+✅ Retrieved 5 similar samples
+[2026-01-06 13:19:40] 
+Similar Samples:
+[2026-01-06 13:19:40] 
+  Sample 1 (Similarity: 0.9909):
+[2026-01-06 13:19:40]     Trajectory: [94, 94, 94, 94, 741, 701, 701, 701, 701, 743, 701, 741] → 741
+[2026-01-06 13:19:40] 
+  Sample 2 (Similarity: 0.9904):
+[2026-01-06 13:19:40]     Trajectory: [1453, 1454, 1454, 1453, 1453, 1453, 1453, 1454, 1454, 1453, 1453, 1453] → 713
+[2026-01-06 13:19:40] 
+  Sample 3 (Similarity: 0.9899):
+[2026-01-06 13:19:40]     Trajectory: [1439, 1599, 1599, 987, 1439, 1388, 1388, 1388, 1388, 1439, 1599, 1599] → 1599
+[2026-01-06 13:19:40] 
+  Sample 4 (Similarity: 0.9898):
+[2026-01-06 13:19:40]     Trajectory: [757, 717, 717, 717, 717, 717, 717, 595, 595, 595, 595, 595] → 595
+[2026-01-06 13:19:40] 
+  Sample 5 (Similarity: 0.9874):
+[2026-01-06 13:19:40]     Trajectory: [816, 896, 816, 1134, 1175, 895, 1013, 1134, 1040, 1134, 1091, 855] → 1134
+[2026-01-06 13:19:40] 
+📄 RAG Summary:
+[2026-01-06 13:19:40] --------------------------------------------------------------------------------
+[2026-01-06 13:19:40] {
+  "avg_distance_from_previous_location_km": 1.28,
+  "category_of_next_location": "Life Services, Shopping & Consumer Goods, Dining & Cusine",
+  "spatial_patterns": "The mobility patterns exhibit a mix of short and long distances, suggesting a combination of local exploration and longer trips. The area types frequented include a variety of destinations such as tourist attractions, shopping centers, dining establishments, and essential services.",
+  "temporal_patterns": "No clear temporal pattern"
+}
+[2026-01-06 13:19:40] --------------------------------------------------------------------------------
+[2026-01-06 13:19:40] 
+--------------------------------------------------------------------------------
+[2026-01-06 13:19:40] STAGE 2: GRAVITY MODEL CANDIDATES
+[2026-01-06 13:19:40] --------------------------------------------------------------------------------
+[2026-01-06 13:19:41] 
+✅ Generated candidates for 14 POI categories
+[2026-01-06 13:19:41] 
+Categories with Candidates:
+[2026-01-06 13:19:41] 
+  1. Transportation Facilities:
+[2026-01-06 13:19:41]       1. Grid 1176 (Score: 275.0000)
+[2026-01-06 13:19:41]       2. Grid 1136 (Score: 176.9205)
+[2026-01-06 13:19:41]       3. Grid 1177 (Score: 146.2572)
+[2026-01-06 13:19:41] 
+  2. Leisure & Entertainment:
+[2026-01-06 13:19:41]       1. Grid 1176 (Score: 25.0000)
+[2026-01-06 13:19:41]       2. Grid 1216 (Score: 10.1097)
+[2026-01-06 13:19:41]       3. Grid 1259 (Score: 6.5313)
+[2026-01-06 13:19:41] 
+  3. Companies & Enterprises:
+[2026-01-06 13:19:41]       1. Grid 1136 (Score: 293.1825)
+[2026-01-06 13:19:41]       2. Grid 1216 (Score: 212.3046)
+[2026-01-06 13:19:41]       3. Grid 1177 (Score: 146.2572)
+[2026-01-06 13:19:41] 
+  4. Healthcare:
+[2026-01-06 13:19:41]       1. Grid 1179 (Score: 19.1186)
+[2026-01-06 13:19:41]       2. Grid 1173 (Score: 18.1627)
+[2026-01-06 13:19:41]       3. Grid 1218 (Score: 18.1068)
+[2026-01-06 13:19:41] 
+  5. Residential:
+[2026-01-06 13:19:41]       1. Grid 1176 (Score: 100.0000)
+[2026-01-06 13:19:41]       2. Grid 1137 (Score: 54.1282)
+[2026-01-06 13:19:41]       3. Grid 1216 (Score: 50.5487)
+[2026-01-06 13:19:41] 
+  6. Tourist Attractions:
+[2026-01-06 13:19:41]       1. Grid 1175 (Score: 68.8269)
+[2026-01-06 13:19:41]       2. Grid 1176 (Score: 50.0000)
+[2026-01-06 13:19:41]       3. Grid 1138 (Score: 9.0526)
+[2026-01-06 13:19:41] 
+  7. Automotive:
+[2026-01-06 13:19:41]       1. Grid 1176 (Score: 50.0000)
+[2026-01-06 13:19:41]       2. Grid 1135 (Score: 9.5520)
+[2026-01-06 13:19:41]       3. Grid 1138 (Score: 7.5439)
+[2026-01-06 13:19:41] 
+  8. Life Services:
+[2026-01-06 13:19:41]       1. Grid 1176 (Score: 150.0000)
+[2026-01-06 13:19:41]       2. Grid 1175 (Score: 103.2404)
+[2026-01-06 13:19:41]       3. Grid 1177 (Score: 103.2404)
+[2026-01-06 13:19:41] 
+  9. Science & Education & Culture:
+[2026-01-06 13:19:41]       1. Grid 1176 (Score: 150.0000)
+[2026-01-06 13:19:41]       2. Grid 1137 (Score: 31.8401)
+[2026-01-06 13:19:41]       3. Grid 1179 (Score: 30.5897)
+[2026-01-06 13:19:41] 
+  10. Shopping & Consumer Goods:
+[2026-01-06 13:19:41]       1. Grid 1014 (Score: 112.1117)
+[2026-01-06 13:19:41]       2. Grid 1259 (Score: 87.6288)
+[2026-01-06 13:19:41]       3. Grid 1051 (Score: 62.9426)
+[2026-01-06 13:19:41] 
+  11. Sports & Fitness:
+[2026-01-06 13:19:41]       1. Grid 1216 (Score: 30.3292)
+[2026-01-06 13:19:41]       2. Grid 1177 (Score: 17.2067)
+[2026-01-06 13:19:41]       3. Grid 1173 (Score: 12.4271)
+[2026-01-06 13:19:41] 
+  12. Hotels & Accommodations:
+[2026-01-06 13:19:41]       1. Grid 1175 (Score: 51.6202)
+[2026-01-06 13:19:41]       2. Grid 1176 (Score: 50.0000)
+[2026-01-06 13:19:41]       3. Grid 1216 (Score: 40.4390)
+[2026-01-06 13:19:41] 
+  13. Financial Institutions:
+[2026-01-06 13:19:41]       1. Grid 1136 (Score: 111.2072)
+[2026-01-06 13:19:41]       2. Grid 1216 (Score: 70.7682)
+[2026-01-06 13:19:41]       3. Grid 1177 (Score: 60.2235)
+[2026-01-06 13:19:41] 
+  14. Dining & Cusine:
+[2026-01-06 13:19:41]       1. Grid 1176 (Score: 125.0000)
+[2026-01-06 13:19:41]       2. Grid 1136 (Score: 101.0974)
+[2026-01-06 13:19:41]       3. Grid 1175 (Score: 94.6370)
+[2026-01-06 13:19:41] 
+--------------------------------------------------------------------------------
+[2026-01-06 13:19:41] STAGE 3: LLM FINAL PREDICTION
+[2026-01-06 13:19:41] --------------------------------------------------------------------------------
+[2026-01-06 13:19:41] 
+📝 PROMPT SENT TO LLM:
+[2026-01-06 13:19:41] --------------------------------------------------------------------------------
+[2026-01-06 13:19:41] You must follow these rules:
+- Do NOT explain.
+- Do NOT think aloud.
+- Do NOT output anything except the answer.
+- Output the answer in this example format: Grid:21
+## Your Task
+You are a mobility prediction expert analyzing human mobility patterns.
+The user may stay at Grid 1176 or move to a new location.
+Predict the next most likely location based on the following information:
+
+## Current Trajectory
+Format: Grid ID (Area Type) with distances between consecutive locations
+Grid 804 (Shopping & Consumer Goods) x4 [20220708 08:30~20220709 03:30] ->6.04km->Grid 1216 (Companies & Enterprises) x2 [20220711 05:30~20220713 20:30] ->0.44km->Grid 1176 (Transportation Facilities) x6 [20220715 08:30~20220721 06:00]
+
+## Feature of next location of similar group mobility
+{
+  "avg_distance_from_previous_location_km": 1.28,
+  "category_of_next_location": "Life Services, Shopping & Consumer Goods, Dining & Cusine",
+  "spatial_patterns": "The mobility patterns exhibit a mix of short and long distances, suggesting a combination of local exploration and longer trips. The area types frequented include a variety of destinations such as tourist attractions, shopping centers, dining establishments, and essential services.",
+  "temporal_patterns": "No clear temporal pattern"
+}
+
+## Candidate Locations
+(Current location included as a candidate for stationary behavior)
+
+Format: [Category]: [Grid ID], [Distance to current location]...
+Transportation Facilities: Grid 1176, 0.20km | Grid 1136, 0.44km | Grid 1177, 0.34km
+Leisure & Entertainment: Grid 1176, 0.20km | Grid 1216, 0.44km | Grid 1259, 1.36km
+Companies & Enterprises: Grid 1136, 0.44km | Grid 1216, 0.44km | Grid 1177, 0.34km
+Healthcare: Grid 1179, 1.02km | Grid 1173, 1.02km | Grid 1218, 0.81km
+Residential: Grid 1176, 0.20km | Grid 1137, 0.56km | Grid 1216, 0.44km
+Tourist Attractions: Grid 1175, 0.34km | Grid 1176, 0.20km | Grid 1138, 0.81km
+Automotive: Grid 1176, 0.20km | Grid 1135, 0.56km | Grid 1138, 0.81km
+Life Services: Grid 1176, 0.20km | Grid 1175, 0.34km | Grid 1177, 0.34km
+Science & Education & Culture: Grid 1176, 0.20km | Grid 1137, 0.56km | Grid 1179, 1.02km
+Shopping & Consumer Goods: Grid 1014, 1.91km | Grid 1259, 1.36km | Grid 1051, 2.16km
+Sports & Fitness: Grid 1216, 0.44km | Grid 1177, 0.34km | Grid 1173, 1.02km
+Hotels & Accommodations: Grid 1175, 0.34km | Grid 1176, 0.20km | Grid 1216, 0.44km
+Financial Institutions: Grid 1136, 0.44km | Grid 1216, 0.44km | Grid 1177, 0.34km
+
+[2026-01-06 13:19:41] --------------------------------------------------------------------------------

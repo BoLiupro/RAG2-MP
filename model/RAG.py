@@ -29,7 +29,13 @@ class MobilityRAG:
         rag_database_path: str = "/workspace/China_Journal/util/rag_database",
         rag_top_m_samples: int = 5,
         city: str = "general",
-        verbose: bool = False
+        verbose: bool = False,
+        # Generation parameters
+        temperature: float = 0.2,
+        top_p: float = 0.8,
+        top_k: int = 40,
+        do_sample: bool = True,
+        max_new_tokens: int = 256
     ):
         """
         Initialize the Mobility RAG module.
@@ -46,6 +52,13 @@ class MobilityRAG:
         self.rag_top_m_samples = rag_top_m_samples
         self.city = city
         self.verbose = verbose
+        
+        # Generation parameters
+        self.temperature = temperature
+        self.top_p = top_p
+        self.top_k = top_k
+        self.do_sample = do_sample
+        self.max_new_tokens = max_new_tokens
         
         # Placeholders for RAG database
         self.database_embeddings = None
@@ -395,9 +408,10 @@ Output only json, no explanation.
         try:
             llm_response = self.llm.generate(
                 prompt=synthesis_prompt,
-                max_new_tokens=min(max_summary_length, 500),  # Increased for JSON output
-                temperature=0.7,  # Very low temperature for structured output
-                do_sample=False  # Disable sampling for more deterministic output
+                max_new_tokens=min(self.max_new_tokens, 500),  # Use config parameter
+                temperature=self.temperature,  # Use config parameter
+                do_sample=self.do_sample,  # Use config parameter
+                top_p=self.top_p  # Use config parameter
             )
             
             # Clean up the response

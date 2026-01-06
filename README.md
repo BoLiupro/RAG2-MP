@@ -588,6 +588,30 @@ Rules:
 ## 输出格式
 - 提交修改后的MobilityPredictor.py脚本文件。
 - 脚本中，包括最终推理Prompt精简的实现。  
+---
+# Prompt_5.3[最终推理Prompt优化]
+# 背景
+最终推理的Prompt有点问题：
+1、任务的描述现在说的是“Predict the next most likely location based on the following information”，但是其实LLM并不能从任务描述中得知时间间隔，比如说是下一个小时、下两小时还是下半天。我觉得需要在任务描述中明确指出时间间隔，例如“Predict the next most likely location within the next 1 hour based on the following information”。这个时间间隔参数需要从config.yaml中传入。
+2、## Current Trajectory
+Format: Grid ID (Area Type) with distances between consecutive locations
+Grid 804 (Shopping & Consumer Goods) x4 [20220708 08:30~20220709 03:30] ->6.04km->Grid 1216 (Companies & Enterprises) x2 [20220711 05:30~20220713 20:30] ->0.44km->Grid 1176 (Transportation Facilities) x6 [20220715 08:30~20220721 06:00]这里我觉得没有必要写上"x2"这样的字眼，直接写Grid 804 (Shopping & Consumer Goods) [20220708 08:30~20220709 03:30] ->6.04km->Grid 1216 (Companies & Enterprises) [20220711 05:30~20220713 20:30] ->0.44km->Grid 1176 (Transportation Facilities) [20220715 08:30~20220721 06:00]就可以了。并且每个grid的poi我觉得可以写两个类别，方便LLM理解这个位置的功能属性。
+4、candidate lopcations现在是Format: [Category]: [Grid ID], [Distance to current location]...
+Transportation Facilities: Grid 1176, 0.20km | Grid 1136, 0.44km | Grid 1177, 0.34km，我觉得还是需要体现出，排在前面的locations是更有可能被选择的。还是需要把分数加上，不过可以告诉LLM这个分数是"attractive"的意思。
+5、Candidate Locations部分怎么没有Dining&Cuisine类别?这个按照设置应该会出现在prompt中。
+## 任务
+请完成以下任务：
+1. **最终推理Prompt优化**：
+   - 修改MobilityPredictor.py脚本中的最终推理Prompt设计，按照上述要求进行优化。
+   - 确保修改后的Prompt能够引导LLM生成符合要求的最终预测回答。
+2. **测试修改**：
+   - 测试修改后的MobilityPredictor.py脚本，确保最终推理Prompt能够正确工作，并提升预测的准确性。
+## 约束
+- 使用Python编程语言。
+- 确保detailed_trainer.py可以够正确调用修改后的MobilityPredictor.py脚本进行测试。
+## 输出格式
+- 提交修改后的MobilityPredictor.py脚本文件。
+- 脚本中，包括最终推理Prompt优化的实现。
 
 ---
 # 代码精简优化

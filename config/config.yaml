@@ -20,14 +20,14 @@ model:
   # LLM (Large Language Model) Configuration
   # ---------------------------------------------------------------------------
   llm:
-    model_name: "Llama-2-7B"  # LLM model name
+    model_name: "Gemma-2-9B"  # LLM model name
     model_path: "/datadisk"  # Base path where LLM models are stored
     
     # Generation parameters
     max_new_tokens: 256  # Maximum tokens to generate in LLM response
-    temperature: 0.7  # Sampling temperature (higher = more random)
-    top_p: 0.9  # Nucleus sampling parameter (cumulative probability)
-    top_k: 50  # Top-k sampling parameter (number of top tokens to consider)
+    temperature: 0.2  # Sampling temperature (higher = more random)
+    top_p: 0.8  # Nucleus sampling parameter (cumulative probability)
+    top_k: 40  # Top-k sampling parameter (number of top tokens to consider)
     do_sample: true  # Whether to use sampling (false for greedy decoding)
     
     # Model optimization
