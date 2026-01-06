@@ -4,6 +4,7 @@ This script provides verbose logging and intermediate result printing for debugg
 Uses a small subset of data for quick testing and analysis.
 """
 
+from random import random
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -93,10 +94,14 @@ class DetailedMobilityTrainer:
             pred_len=self.config['data']['pred_len']
         )
         
+        # 随机一个起始点进行调试
+        import random
+        random_start = random.randint(0, len(self.train_dataset) - self.num_debug_samples)
+        
         # Use small subsets for debugging by slicing
-        self.train_dataset.samples = self.train_dataset.samples[:self.num_debug_samples]
-        self.val_dataset.samples = self.val_dataset.samples[:self.num_debug_samples]
-        self.test_dataset.samples = self.test_dataset.samples[:self.num_debug_samples]
+        self.train_dataset.samples = self.train_dataset.samples[random_start:random_start + self.num_debug_samples]
+        self.val_dataset.samples = self.val_dataset.samples[random_start:random_start + self.num_debug_samples]
+        self.test_dataset.samples = self.test_dataset.samples[random_start:random_start + self.num_debug_samples]
         
         self.log(f"Train samples: {len(self.train_dataset)}")
         self.log(f"Validation samples: {len(self.val_dataset)}")
@@ -124,22 +129,6 @@ class DetailedMobilityTrainer:
             top_k = model_config['llm'].get('top_k', 40)
             do_sample = model_config['llm'].get('do_sample', True)
             max_new_tokens = model_config['llm'].get('max_new_tokens', 256)
-        else:  # Old format
-            llm_model_name = model_config['llm_model_name']
-            llm_model_path = model_config['llm_model_path']
-            use_quantization = model_config['use_quantization']
-            rag_top_m_samples = model_config['rag_top_m_samples']
-            gravity_top_n_candidates = model_config['gravity_top_n_candidates']
-            gravity_weight = model_config['gravity_weight']
-            gravity_radius = model_config['gravity_radius']
-            top_k_predictions = model_config['top_k_predictions']
-            prediction_time_interval = '1 hour'
-            # Default generation parameters for old format
-            temperature = 0.2
-            top_p = 0.8
-            top_k = 40
-            do_sample = True
-            max_new_tokens = 256
         
         self.log(f"  LLM Model: {llm_model_name}")
         self.log(f"  RAG Top-M Samples: {rag_top_m_samples}")

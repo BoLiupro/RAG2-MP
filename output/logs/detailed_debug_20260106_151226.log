@@ -1,0 +1,11 @@
+[2026-01-06 15:12:26] Loading datasets...
+[2026-01-06 15:12:52] Train samples: 10
+[2026-01-06 15:12:52] Validation samples: 0
+[2026-01-06 15:12:52] Test samples: 0
+[2026-01-06 15:12:52] 
+Initializing MobilityPredictor model...
+[2026-01-06 15:12:52]   LLM Model: Gemma-2-9B
+[2026-01-06 15:12:52]   RAG Top-M Samples: 5
+[2026-01-06 15:12:52]   Gravity Top-N Candidates: 3
+[2026-01-06 15:12:52]   Prediction Top-K: 10
+[2026-01-06 15:12:52]   Prediction Time Interval: 1 hour

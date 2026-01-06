@@ -381,8 +381,8 @@ class MobilityRAG:
         # New structured synthesis prompt with enhanced JSON format requirement
         synthesis_prompt = f"""Analyze the following mobility patterns and provide a structured summary in JSON format.
         Summarize the average distance from previous locations, 2-3 possible poi categories of next locations,
-        analyze spatial patterns such as distance trends and area characteristics in 3-4 sentences, 
-        and describe time patterns in 2 sentences, or 'No clear temporal pattern' .
+        analyze spatial patterns such as distance trends and area characteristics in 4-5 sentences, 
+        and describe time patterns such as when the movement happens in 3 sentences, or 'No clear temporal pattern' .
         These are mobility trajectories that are semantically similar to a query trajectory:
 
 {context}
