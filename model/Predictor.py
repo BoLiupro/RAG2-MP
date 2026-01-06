@@ -344,13 +344,15 @@ class MobilityPredictor:
             
             poi_features = poi_data[loc_id]
             # Get all POI types with their percentages
-            poi_list = [(poi_type.replace('_count', '').replace('_', ' ').title(), pct) 
-                       for poi_type, pct in poi_features.items() if '_count' in poi_type]
+            # Note: RAG.poi_data keys are already stripped of '_percentage' suffix
+            poi_list = [(poi_type.replace('_', ' ').strip(), pct) 
+                       for poi_type, pct in poi_features.items() if pct > 0]
+            
             # Sort by percentage descending
             poi_list.sort(key=lambda x: x[1], reverse=True)
             
             # Get top N types with percentage > 0
-            top_types = [name for name, pct in poi_list[:top_n] if pct > 0]
+            top_types = [name for name, pct in poi_list[:top_n]]
             
             if not top_types:
                 return "Mixed"
