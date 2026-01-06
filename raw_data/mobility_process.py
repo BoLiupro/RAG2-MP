@@ -410,7 +410,7 @@ def main():
     parser.add_argument('--split_ratios', type=float, nargs=4, 
                         default=[0.45, 0.45, 0.05, 0.05],
                         help='数据集划分比例 [rag, train, val, test], 默认: 0.45 0.45 0.05 0.05')
-    parser.add_argument('--max_days', type=int, default=7,
+    parser.add_argument('--max_days', type=int, default=5,
                         help='限制处理的天数（保留最近N天数据），默认None表示处理所有天数')
     
     args = parser.parse_args()
