@@ -96,12 +96,13 @@ class DetailedMobilityTrainer:
         
         # 随机一个起始点进行调试
         import random
-        random_start = random.randint(0, len(self.train_dataset) - self.num_debug_samples)
-        
+        random_start_train = random.randint(0, len(self.train_dataset) - self.num_debug_samples)
+        random_start_val = random.randint(0, len(self.val_dataset) - self.num_debug_samples)
+        random_start_test = random.randint(0, len(self.test_dataset) - self.num_debug_samples)
         # Use small subsets for debugging by slicing
-        self.train_dataset.samples = self.train_dataset.samples[random_start:random_start + self.num_debug_samples]
-        self.val_dataset.samples = self.val_dataset.samples[random_start:random_start + self.num_debug_samples]
-        self.test_dataset.samples = self.test_dataset.samples[random_start:random_start + self.num_debug_samples]
+        self.train_dataset.samples = self.train_dataset.samples[random_start_train:random_start_train + self.num_debug_samples]
+        self.val_dataset.samples = self.val_dataset.samples[random_start_val:random_start_val + self.num_debug_samples]
+        self.test_dataset.samples = self.test_dataset.samples[random_start_test:random_start_test + self.num_debug_samples]
         
         self.log(f"Train samples: {len(self.train_dataset)}")
         self.log(f"Validation samples: {len(self.val_dataset)}")
