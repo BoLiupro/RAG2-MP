@@ -1,0 +1,30 @@
+[2026-01-07 14:07:49] Loading datasets...
+[2026-01-07 14:08:15] Train samples: 30018
+[2026-01-07 14:08:15] Validation samples: 3196
+[2026-01-07 14:08:15] Test samples: 3206
+[2026-01-07 14:08:15] Initializing MobilityPredictor model...
+[2026-01-07 14:08:15]   LLM Model: Gemma-2-9B
+[2026-01-07 14:08:15]   RAG Top-M Samples: 10
+[2026-01-07 14:08:15]   Gravity Top-N Candidates: 3
+[2026-01-07 14:08:15]   Gravity Weight: 1.0
+[2026-01-07 14:08:15]   Gravity Weight Config: None (using default)
+[2026-01-07 14:08:15]   Prediction Top-K: 10
+[2026-01-07 14:08:15]   Prediction Time Interval: 1 hour
+[2026-01-07 14:08:15]   Generation params: temperature=0.2, top_p=0.8, top_k=40, do_sample=True
+[2026-01-07 14:08:32] LoRA enabled: 0 trainable LLM params
+[2026-01-07 14:08:32] WARNING: LoRA enabled but no LoRA parameters found. Model will be fully frozen.
+[2026-01-07 14:08:32] Model initialized successfully
+[2026-01-07 14:08:32] 
+======================================================================
+[2026-01-07 14:08:32] TESTING MODEL
+[2026-01-07 14:08:32] ======================================================================
+[2026-01-07 14:08:50] Error testing sample 0: name 'loss' is not defined
+[2026-01-07 14:09:07] Error testing sample 1: name 'loss' is not defined
+[2026-01-07 14:09:22] Error testing sample 2: name 'loss' is not defined
+[2026-01-07 14:09:39] Error testing sample 3: name 'loss' is not defined
+[2026-01-07 14:09:56] Error testing sample 4: name 'loss' is not defined
+[2026-01-07 14:10:10] Error testing sample 5: name 'loss' is not defined
+[2026-01-07 14:10:28] Error testing sample 6: name 'loss' is not defined
+[2026-01-07 14:10:42] Error testing sample 7: name 'loss' is not defined
+[2026-01-07 14:10:58] Error testing sample 8: name 'loss' is not defined
+[2026-01-07 14:11:17] Error testing sample 9: name 'loss' is not defined

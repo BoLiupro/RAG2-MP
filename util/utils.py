@@ -329,28 +329,70 @@ def calculate_accuracy_at_k(predictions: List[List[int]], ground_truths: List[in
     return hits / len(ground_truths)
 
 
-def calculate_mrr(predictions: List[List[int]], ground_truths: List[int]) -> float:
+def calculate_mrr(predictions: List[List[int]], ground_truths: List[int], k: int = 5) -> float:
     """
-    Calculate Mean Reciprocal Rank (MRR).
+    Calculate Mean Reciprocal Rank (MRR@k).
     
     Args:
-        predictions: List of prediction lists (each list contains predicted grid IDs)
+        predictions: List of prediction lists (each list contains predicted grid IDs or tuples)
         ground_truths: List of ground truth grid IDs
+        k: Top-k to consider
     
     Returns:
-        MRR score
+        MRR@k score
     """
     if len(predictions) != len(ground_truths):
         raise ValueError("Predictions and ground truths must have the same length")
     
     rr_sum = 0.0
     for pred_list, gt in zip(predictions, ground_truths):
-        topk_ids = [grid_id for grid_id, _ in pred_list[:k]]
-        if gt in pred_list:
-            rank = pred_list.index(gt) + 1
+        # Extract IDs if predictions are independent tuples (grid_id, score)
+        if pred_list and isinstance(pred_list[0], (tuple, list)):
+            topk_ids = [x[0] for x in pred_list[:k]]
+        else:
+            topk_ids = pred_list[:k]
+
+        if gt in topk_ids:
+            rank = topk_ids.index(gt) + 1
             rr_sum += 1.0 / rank
     
     return rr_sum / len(ground_truths)
+
+
+def calculate_ade(predictions: List[List[int]], ground_truths: List[int], city: str, grid_size: int = 40) -> float:
+    """
+    Calculate Average Distance Error (ADE) for top-1 prediction.
+    
+    Args:
+        predictions: List of prediction lists (each list contains predicted grid IDs or tuples)
+        ground_truths: List of ground truth grid IDs
+        city: City name
+        grid_size: Grid size
+    
+    Returns:
+        ADE score in km
+    """
+    if len(predictions) != len(ground_truths):
+        raise ValueError("Predictions and ground truths must have the same length")
+    
+    total_dist = 0.0
+    count = 0
+    
+    for pred_list, gt in zip(predictions, ground_truths):
+        if not pred_list:
+            continue
+            
+        # Extract top-1 ID
+        if isinstance(pred_list[0], (tuple, list)):
+            top1_id = pred_list[0][0]
+        else:
+            top1_id = pred_list[0]
+            
+        dist = calculate_grid_distance(top1_id, gt, city, grid_size)
+        total_dist += dist
+        count += 1
+    
+    return total_dist / count if count > 0 else 0.0
 
 
 def format_candidates_with_distances(

@@ -19,7 +19,7 @@ from typing import List, Dict, Any, Tuple
 
 from model.Predictor import MobilityPredictor
 from dataset.dataset import load_datasets
-from util.utils import calculate_accuracy_at_k, calculate_mrr
+from util.utils import calculate_accuracy_at_k, calculate_mrr, calculate_ade
 
 
 class MobilityTrainer:
@@ -574,8 +574,12 @@ class MobilityTrainer:
             metrics[f'val_acc@{k}'] = acc
         
         # Compute MRR
-        mrr = calculate_mrr(all_predictions, all_ground_truths)
+        mrr = calculate_mrr(all_predictions, all_ground_truths, k=5)
         metrics['val_mrr'] = mrr
+
+        # Compute ADE
+        ade = calculate_ade(all_predictions, all_ground_truths, city=self.config['data']['city'])
+        metrics['val_ade'] = ade
         
         if epoch is not None:
             metrics['epoch'] = epoch
@@ -647,7 +651,8 @@ class MobilityTrainer:
                     current_acc1 = calculate_accuracy_at_k(all_predictions, all_ground_truths, 1)
                     current_acc3 = calculate_accuracy_at_k(all_predictions, all_ground_truths, 3)
                     current_acc5 = calculate_accuracy_at_k(all_predictions, all_ground_truths, 5)
-                    current_mrr = calculate_mrr(all_predictions, all_ground_truths)
+                    current_mrr = calculate_mrr(all_predictions, all_ground_truths, k=5)
+                    current_ade = calculate_ade(all_predictions, all_ground_truths, city=self.config['data']['city'])
                     # current_loss = np.mean(test_losses)
                     
                     # Update progress bar with real-time metrics
@@ -656,7 +661,8 @@ class MobilityTrainer:
                         'Acc@1': f'{current_acc1:.4f}',
                         'Acc@3': f'{current_acc3:.4f}',
                         'Acc@5': f'{current_acc5:.4f}',
-                        'MRR': f'{current_mrr:.4f}'
+                        'MRR@5': f'{current_mrr:.4f}',
+                        'ADE': f'{current_ade:.4f}'
                     })
                     
                     # Optional lightweight per-sample logging without prompts or summaries
@@ -667,7 +673,7 @@ class MobilityTrainer:
                             f.write(f"{'='*70}\n")
                             f.write(f"Ground Truth: Grid {ground_truth}\n")
                             f.write(f"Top Predictions: {predictions}\n")
-                            f.write(f"Loss: {loss.item():.4f}\n")
+                            # f.write(f"Loss: {loss.item():.4f}\n")
                             f.write(f"{'='*70}\n")
                     
                 except Exception as e:
@@ -676,7 +682,7 @@ class MobilityTrainer:
         
         # Compute metrics
         metrics = {
-            'test_loss': np.mean(test_losses) if test_losses else 0.0,
+            # 'test_loss': np.mean(test_losses) if test_losses else 0.0,
             'test_samples': len(all_predictions)
         }
         
@@ -686,17 +692,22 @@ class MobilityTrainer:
             metrics[f'test_acc@{k}'] = acc
         
         # Compute MRR
-        mrr = calculate_mrr(all_predictions, all_ground_truths)
+        mrr = calculate_mrr(all_predictions, all_ground_truths, k=5)
         metrics['test_mrr'] = mrr
+
+        # Compute ADE
+        ade = calculate_ade(all_predictions, all_ground_truths, city=self.config['data']['city'])
+        metrics['test_ade'] = ade
         
         # Log metrics
         self.log("\nTest Results:")
-        self.log(f"  Loss: {metrics['test_loss']:.4f}")
+        # self.log(f"  Loss: {metrics['test_loss']:.4f}")
         self.log(f"  Acc@1: {metrics['test_acc@1']:.4f}")
         self.log(f"  Acc@3: {metrics['test_acc@3']:.4f}")
         self.log(f"  Acc@5: {metrics['test_acc@5']:.4f}")
         self.log(f"  Acc@10: {metrics['test_acc@10']:.4f}")
-        self.log(f"  MRR: {metrics['test_mrr']:.4f}")
+        self.log(f"  MRR@5: {metrics['test_mrr']:.4f}")
+        self.log(f"  ADE: {metrics['test_ade']:.4f} km")
         self.log("="*70)
         
         if detailed_log:

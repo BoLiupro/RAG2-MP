@@ -255,7 +255,7 @@ def load_datasets(
     )
     
     test_dataset = MobilityDataset(
-        data_path=os.path.join(city_dir, "test.csv"),
+        data_path=os.path.join(city_dir, "small_test.csv"),
         city=city,
         obs_len=obs_len,
         pred_len=pred_len,

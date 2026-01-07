@@ -178,6 +178,13 @@ POI一共14类，分别为:[交通设置、休闲娱乐、公司企业、医疗�
 - 提交修改后的mobility_processing.py脚本。
 - 重新运行修改后的脚本，生成处理后的所有城市出行轨迹数据csv文件，包括rag.csv, train.csv, val.csv和test.csv。文件全部保存在data/{city}目录下。
 ---
+# Prompt_1.7[test数据集缩小]
+## 背景
+目前的test数据集还是太大了，我用了一个小版本的test_samll.csv.逻辑：
+读取 config.yaml 获取 random_seed 并设置随机种子。
+计算每个用户的采样行数：max(min_required_len, target_total // num_users)。其中 min_required_len 确保采样长度足以生成至少一个训练/测试样本（基于 obs_len + pred_len）。
+对每个用户，按时间排序后，随机截取一段连续的轨迹片段，保证了“覆盖所有用户”且“每个user抽一点轨迹”。
+---
 
 # 代码框架
 ---
@@ -689,7 +696,6 @@ Current Trajectory部分，还是按照原来的格式，把每个grid的出现�
 ---
 # Prompt_6.2[引力模型参数调整V2]
 fit_gravity_weight.py中，停留在自身原地的数据不参与拟合；2、在计算score的时候，停留在原地的需要特别处理，在util.py中将原地的distance改为视作0.01，但是计算score的时候不要“爆炸”，需要特别处理一下；3、weight保存的位置改在/workspace/China_Journal/util/gravity_weight 
-
 ---
 
 # 代码精简优化
@@ -728,3 +734,30 @@ gravity: include_current默认就是true，没有必要额外输入参数或者�
             mobility_mode = "general mobility"。
 ---
 
+
+# 实验设计-baseline
+# Prompt_8.1[baseline实现-GravityModel]
+## 背景
+现在我需要实现一个基于引力模型的baseline，用于与当前的mobility prediction模型进行对比和评估。这个baseline模型需要利用引力模型的原理，结合POI数据和当前轨迹信息，来预测下一个可能的位置。具体来说：
+1、引力模型的公式为：attractive score of poi category A=weight* num_of_poi_category_A_in_grid/Distance_from_current_Grid^2。weight读取/workspace/China_Journal/util/gravity_weight中的值。
+2、根据当前轨迹的最后位置，计算每个候选位置的引力分数。
+3、根据引力分数，选择top-K个位置按照分数大小排序，作为最终的预测结果。
+## 任务
+请完成以下任务：
+1. **GravityModel baseline实现**：
+   - 编写GravityModel.py脚本，实现基于引力模型的baseline。
+   - 脚本需要按照上述步骤实现，包括读取POI数据、计算引力分数、选择top-K位置等部分。
+2. **单独测试脚本实现**：
+   - 编写test_gravity_model.py脚本，实现对GravityModel baseline的单独测试功能。
+   - 脚本需要读取测试集small_test.csv数据，调用GravityModel进行预测，并计算评估指标（如top-K accuracy, MRR,ADE等）。
+## 约束
+- 使用Python编程语言。
+- 完全独立于现有的mobility prediction模型代码。
+- 过程中需要有适当的注释和过程打印。
+- 输出的预测结果格式要与mobility prediction模型保持一致，确保能够进行对比和评估。
+## 输出格式
+- 提交GravityModel.py和test_gravity_model.py脚本文件。卸载baseline/gravity_model路径下。
+- GravityModel.py脚本中，包括基于引力模型的baseline实现。
+- test_gravity_model.py脚本中，包括对GravityModel baseline的单独测试功能。
+- radius参数手动设置。
+---

@@ -1,5 +1,7 @@
 # Configuration file for Mobility Prediction Training
 
+random_seed: 42
+
 # ============================================================================
 # Data Configuration
 # ============================================================================
@@ -115,7 +117,7 @@ validation:
 # Testing Configuration
 # ============================================================================
 testing:
-  # num_samples: 100  # Number of test samples (null for all)
+  num_samples: 100  # Number of test samples (null for all)
   batch_size: 1  # Batch size for testing
   
   # Logging options
