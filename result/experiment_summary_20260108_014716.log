@@ -1,0 +1,6 @@
+Hyperparameter Experiment Summary
+Started: Thu Jan  8 01:47:16 AM CST 2026
+==========================================
+
+Exp#  RAG_top_m    Radius       Acc@1      Acc@3      Acc@5      MRR@5      ADE(km)   
+--------------------------------------------------------------------------------

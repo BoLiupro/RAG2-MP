@@ -45,7 +45,7 @@ model:
   # RAG (Retrieval-Augmented Generation) Configuration
   # ---------------------------------------------------------------------------
   rag:
-    top_m_samples: 1  # Number of similar historical samples to retrieve
+    top_m_samples: 3  # Number of similar historical samples to retrieve
     database_path: "/workspace/China_Journal/util/rag_database"  # RAG database directory
     max_summary_length: 256  # Maximum summary length in tokens
   
@@ -109,7 +109,7 @@ training:
 # Validation Configuration
 # ============================================================================
 validation:
-  # num_samples: 10000
+  # num_samples: 10000null  # Number of validation samples (null for all)
   batch_size: 1  # Batch size for validation
   verbose: false  # Print detailed validation information
 
@@ -117,7 +117,7 @@ validation:
 # Testing Configuration
 # ============================================================================
 testing:
-  num_samples: 10000
+  num_samples: 10000null  # Number of test samples (null for all)
   batch_size: 1  # Batch size for testing
   
   # Logging options
@@ -141,7 +141,7 @@ rag_build:
 # ============================================================================
 detailed_debug:
   enabled: true  # Enable detailed debugging mode
-  num_samples: 10000
+  num_samples: 10000null  # Number of samples for detailed debugging
   print_prompts: true  # Print all prompts sent to LLM
   print_rag_results: true  # Print RAG retrieval results
   print_gravity_candidates: true  # Print gravity model candidates

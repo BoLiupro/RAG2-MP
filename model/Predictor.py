@@ -480,8 +480,8 @@ class MobilityPredictor:
         prompt += detailed_traj + "\n\n"
         
         # Add RAG summary
-        prompt += "## Feature of next location of similar group mobility\n"
-        prompt += f"{rag_summary}\n\n"
+        # prompt += "## Feature of next location of similar group mobility\n"
+        # prompt += f"{rag_summary}\n\n"
         
         # Add compact candidate locations
         prompt += "## Candidate Locations\n"

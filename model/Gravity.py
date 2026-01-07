@@ -240,7 +240,7 @@ class GravityModel:
         if current_grid_id == target_grid_id:
             # Use a fixed moderate base score
             # After log smoothing: log(1 + 10) ≈ 2.4
-            base_score = 10.0
+            base_score = 100
             smoothed_base = self._smooth_base_score(base_score)
             return weight * smoothed_base
         

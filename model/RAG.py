@@ -497,8 +497,8 @@ Output format:
     
 
         # Step 2: Remove markdown code blocks if present
-        llm_response = re.sub(r'\n\n```json\s*', '', llm_response)
-        llm_response = re.sub(r'\n```\s*', '', llm_response)
+        llm_response = re.sub(r'\s*```json\s*', '', llm_response)
+        llm_response = re.sub(r'\s*```\s*', '', llm_response)
         
         # Step 3: Remove any leading/trailing whitespace
         llm_response = llm_response.strip()
