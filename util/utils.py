@@ -322,7 +322,8 @@ def calculate_accuracy_at_k(predictions: List[List[int]], ground_truths: List[in
     
     hits = 0
     for pred_list, gt in zip(predictions, ground_truths):
-        if gt in pred_list[:k]:
+        topk_ids = [grid_id for grid_id, _ in pred_list[:k]]
+        if gt in topk_ids:
             hits += 1
     
     return hits / len(ground_truths)
@@ -344,6 +345,7 @@ def calculate_mrr(predictions: List[List[int]], ground_truths: List[int]) -> flo
     
     rr_sum = 0.0
     for pred_list, gt in zip(predictions, ground_truths):
+        topk_ids = [grid_id for grid_id, _ in pred_list[:k]]
         if gt in pred_list:
             rank = pred_list.index(gt) + 1
             rr_sum += 1.0 / rank

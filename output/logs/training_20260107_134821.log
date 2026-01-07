@@ -1,0 +1,20 @@
+[2026-01-07 13:48:25] Loading datasets...
+[2026-01-07 13:50:53] Train samples: 30018
+[2026-01-07 13:50:53] Validation samples: 3196
+[2026-01-07 13:50:59] Test samples: 3206
+[2026-01-07 13:51:16] Initializing MobilityPredictor model...
+[2026-01-07 13:51:16]   LLM Model: Gemma-2-9B
+[2026-01-07 13:51:16]   RAG Top-M Samples: 10
+[2026-01-07 13:51:16]   Gravity Top-N Candidates: 3
+[2026-01-07 13:51:16]   Gravity Weight: 1.0
+[2026-01-07 13:51:16]   Gravity Weight Config: None (using default)
+[2026-01-07 13:51:16]   Prediction Top-K: 10
+[2026-01-07 13:51:16]   Prediction Time Interval: 1 hour
+[2026-01-07 13:51:16]   Generation params: temperature=0.2, top_p=0.8, top_k=40, do_sample=True
+[2026-01-07 13:51:35] LoRA enabled: 0 trainable LLM params
+[2026-01-07 13:51:35] WARNING: LoRA enabled but no LoRA parameters found. Model will be fully frozen.
+[2026-01-07 13:51:35] Model initialized successfully
+[2026-01-07 13:51:35] 
+======================================================================
+[2026-01-07 13:51:35] TESTING MODEL
+[2026-01-07 13:51:35] ======================================================================

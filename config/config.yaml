@@ -73,7 +73,7 @@ training:
   # Basic training parameters
   num_epochs: 3  # Number of training epochs
   batch_size: 1  # Batch size (currently only supports 1 due to LLM constraints)
-  samples_per_epoch: 500  # Samples to train per epoch (null for all training data)
+  # samples_per_epoch: None  # Samples to train per epoch (null for all training data)
   
   # Optimizer parameters
   learning_rate: 5.0e-5  # Learning rate for optimizer (reduced for stability)
@@ -107,7 +107,7 @@ training:
 # Validation Configuration
 # ============================================================================
 validation:
-  num_samples: 100  # Number of validation samples (null for all)
+  # num_samples: 100  # Number of validation samples (null for all)
   batch_size: 1  # Batch size for validation
   verbose: false  # Print detailed validation information
 
@@ -115,7 +115,7 @@ validation:
 # Testing Configuration
 # ============================================================================
 testing:
-  num_samples: 100  # Number of test samples (null for all)
+  # num_samples: 100  # Number of test samples (null for all)
   batch_size: 1  # Batch size for testing
   
   # Logging options

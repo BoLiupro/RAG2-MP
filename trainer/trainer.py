@@ -570,11 +570,11 @@ class MobilityTrainer:
         
         # Compute accuracy metrics
         for k in [1, 3, 5, 10]:
-            acc = calculate_accuracy_at_k([all_predictions], [all_ground_truths], k)
+            acc = calculate_accuracy_at_k(all_predictions, all_ground_truths, k)
             metrics[f'val_acc@{k}'] = acc
         
         # Compute MRR
-        mrr = calculate_mrr([all_predictions], [all_ground_truths])
+        mrr = calculate_mrr(all_predictions, all_ground_truths)
         metrics['val_mrr'] = mrr
         
         if epoch is not None:
@@ -637,11 +637,27 @@ class MobilityTrainer:
                     )
                     
                     # Compute loss
-                    loss, info = self.compute_loss(observation, ground_truth)
-                    test_losses.append(loss.item())
-                    
+                    # loss, info = self.compute_loss(observation, ground_truth)
+                    # test_losses.append(loss.item())
+                      
                     all_predictions.append(predictions)
                     all_ground_truths.append(ground_truth)
+                    
+                    # Real-time metrics calculation
+                    current_acc1 = calculate_accuracy_at_k(all_predictions, all_ground_truths, 1)
+                    current_acc3 = calculate_accuracy_at_k(all_predictions, all_ground_truths, 3)
+                    current_acc5 = calculate_accuracy_at_k(all_predictions, all_ground_truths, 5)
+                    current_mrr = calculate_mrr(all_predictions, all_ground_truths)
+                    # current_loss = np.mean(test_losses)
+                    
+                    # Update progress bar with real-time metrics
+                    pbar.set_postfix({
+                        # 'Loss': f'{current_loss:.4f}',
+                        'Acc@1': f'{current_acc1:.4f}',
+                        'Acc@3': f'{current_acc3:.4f}',
+                        'Acc@5': f'{current_acc5:.4f}',
+                        'MRR': f'{current_mrr:.4f}'
+                    })
                     
                     # Optional lightweight per-sample logging without prompts or summaries
                     if detailed_log and sample_idx < 10:  # Log first 10 samples only
@@ -666,11 +682,11 @@ class MobilityTrainer:
         
         # Compute accuracy metrics
         for k in [1, 3, 5, 10]:
-            acc = calculate_accuracy_at_k([all_predictions], [all_ground_truths], k)
+            acc = calculate_accuracy_at_k(all_predictions, all_ground_truths, k)
             metrics[f'test_acc@{k}'] = acc
         
         # Compute MRR
-        mrr = calculate_mrr([all_predictions], [all_ground_truths])
+        mrr = calculate_mrr(all_predictions, all_ground_truths)
         metrics['test_mrr'] = mrr
         
         # Log metrics
@@ -813,7 +829,7 @@ def main():
     trainer.initialize_model()
     
     # Train
-    trainer.train()
+    # trainer.train()
     
     # Test
     test_metrics = trainer.test(detailed_log=True)
