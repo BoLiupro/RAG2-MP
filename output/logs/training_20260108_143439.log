@@ -1,0 +1,30 @@
+[2026-01-08 14:34:39] Loading datasets...
+[2026-01-08 14:35:22] Train samples: 54019
+[2026-01-08 14:35:22] Validation samples: 5016
+[2026-01-08 14:35:22] Test samples: 117
+[2026-01-08 14:35:22] Initializing MobilityPredictor model...
+[2026-01-08 14:35:22]   LLM Model: Gemma-2-9B
+[2026-01-08 14:35:22]   RAG Top-M Samples: 10
+[2026-01-08 14:35:22]   Gravity Top-N Candidates: 3
+[2026-01-08 14:35:22]   Gravity Weight: 1.0
+[2026-01-08 14:35:22]   Gravity Weight Config: /workspace/China_Journal/util/gravity_weight/gravity_weights_${data.city}.json
+[2026-01-08 14:35:22]   Prediction Top-K: 10
+[2026-01-08 14:35:22]   Prediction Time Interval: 1 hour
+[2026-01-08 14:35:22]   Generation params: temperature=0.2, top_p=0.8, top_k=40, do_sample=True
+[2026-01-08 14:35:35] LoRA enabled: 0 trainable LLM params
+[2026-01-08 14:35:35] WARNING: LoRA enabled but no LoRA parameters found. Model will be fully frozen.
+[2026-01-08 14:35:35] Model initialized successfully
+[2026-01-08 14:35:35] 
+======================================================================
+[2026-01-08 14:35:35] TESTING MODEL
+[2026-01-08 14:35:35] ======================================================================
+[2026-01-08 15:21:04] 
+Test Results:
+[2026-01-08 15:21:04]   Acc@1: 0.6068
+[2026-01-08 15:21:04]   Acc@3: 0.6325
+[2026-01-08 15:21:04]   Acc@5: 0.6410
+[2026-01-08 15:21:04]   Acc@10: 0.6667
+[2026-01-08 15:21:04]   MRR@5: 0.6199
+[2026-01-08 15:21:04]   ADE: 1.3490 km
+[2026-01-08 15:21:04] ======================================================================
+[2026-01-08 15:21:04] Detailed test log saved to: /workspace/China_Journal/output/logs/test_detailed_20260108_143535.log

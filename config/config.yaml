@@ -7,7 +7,7 @@ random_seed: 42
 # ============================================================================
 data:
   # City and paths
-  city: "shenzhen"  # City name: beijing, shenzhen, nanchang
+  city: "nanchang"  # City name: beijing, shenzhen, nanchang
   data_dir: "/workspace/China_Journal/data"  # Base data directory
   
   # Trajectory parameters
