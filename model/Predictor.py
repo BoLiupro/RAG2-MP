@@ -290,6 +290,53 @@ class MobilityPredictor:
                         if len(predictions) >= self.top_k_predictions:
                             break
         
+        else:
+            # Standard generation mode (not using beam search)
+            with torch.no_grad():
+                outputs = self.llm.model.generate(
+                    **inputs,
+                    max_new_tokens=self.max_new_tokens,
+                    do_sample=self.do_sample,
+                    temperature=self.temperature,
+                    top_k=self.top_k,
+                    top_p=self.top_p,
+                    pad_token_id=self.llm.tokenizer.pad_token_id,
+                )
+            
+            # Decode the output
+            generated_text = self.llm.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
+            # Extract generated part (remove prompt)
+            if generated_text.startswith(prompt):
+                response = generated_text[len(prompt):].strip()
+            else:
+                response = generated_text.strip()
+            
+            if print_prompt:
+                print(f"\n{'='*80}")
+                print(f"LLM Response: {response}")
+                print(f"{'='*80}\n")
+            
+            # Parse grid_id from response
+            grid_id = self._parse_grid_id_from_response(response)
+            
+            predictions = []
+            seen_grids = set()
+            
+            # Add the predicted grid if valid
+            if grid_id is not None and 0 <= grid_id < self.num_grids:
+                predictions.append((grid_id, 1.0))
+                seen_grids.add(grid_id)
+            
+            # Fill remaining predictions with candidates
+            for candidate_grid in candidate_list:
+                if candidate_grid not in seen_grids:
+                    confidence = 1.0 / (len(predictions) + 1)
+                    predictions.append((candidate_grid, confidence))
+                    seen_grids.add(candidate_grid)
+                    if len(predictions) >= self.top_k_predictions:
+                        break
+        
         # Return predictions (no logits needed for generation-based approach)
         candidate_list = list(range(self.num_grids))
         return predictions, None, candidate_list
@@ -480,8 +527,8 @@ class MobilityPredictor:
         prompt += detailed_traj + "\n\n"
         
         # Add RAG summary
-        prompt += "## Feature of next location of similar group mobility\n"
-        prompt += f"{rag_summary}\n\n"
+        # prompt += "## Feature of next location of similar group mobility\n"
+        # prompt += f"{rag_summary}\n\n"
         
         # Add compact candidate locations
         prompt += "## Candidate Locations\n"

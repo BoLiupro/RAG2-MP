@@ -19,7 +19,7 @@ export PYTHONPATH="${PYTHONPATH}:/workspace/China_Journal"
 
 # Configuration
 BASE_CONFIG="/workspace/China_Journal/config/config.yaml"
-RESULT_DIR="/workspace/China_Journal/result"
+RESULT_DIR="/workspace/China_Journal/output/logs/hyper"
 BACKUP_CONFIG="${BASE_CONFIG}.backup"
 EXPERIMENT_LOG="${RESULT_DIR}/experiment_summary_$(date +%Y%m%d_%H%M%S).log"
 
