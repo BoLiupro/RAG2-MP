@@ -1,0 +1,41 @@
+{
+  "city": "shenzhen",
+  "weights": {
+    "Transportation Facilities_count": 1.08828125,
+    "Leisure & Entertainment_count": 1.1125,
+    "Companies & Enterprises_count": 1.9531250000000022,
+    "Healthcare_count": 1.1132812500000002,
+    "Residential_count": 1.1,
+    "Tourist Attractions_count": 1.05,
+    "Automotive_count": 1.1140625000000002,
+    "Life Services_count": 1.400000000000001,
+    "Science & Education & Culture_count": 1.6000000000000019,
+    "Shopping & Consumer Goods_count": 1.096875,
+    "Sports & Fitness_count": 0.9999999046325684,
+    "Hotels & Accommodations_count": 1.1,
+    "Financial Institutions_count": 1.1125,
+    "Dining & Cuisine_count": 2.012500000000002
+  },
+  "evaluation": {
+    "Transportation Facilities_count": 36.87179487179487,
+    "Leisure & Entertainment_count": 63.46153846153846,
+    "Companies & Enterprises_count": 48.01282051282051,
+    "Healthcare_count": 75.85897435897436,
+    "Residential_count": 51.705128205128204,
+    "Tourist Attractions_count": 101.7051282051282,
+    "Automotive_count": 69.14102564102564,
+    "Life Services_count": 35.44871794871795,
+    "Science & Education & Culture_count": 55.03846153846154,
+    "Shopping & Consumer Goods_count": 45.217948717948715,
+    "Sports & Fitness_count": 65.58974358974359,
+    "Hotels & Accommodations_count": 83.3974358974359,
+    "Financial Institutions_count": 77.93589743589743,
+    "Dining & Cuisine_count": 46.52564102564103
+  },
+  "metadata": {
+    "obs_len": 12,
+    "radius": 10,
+    "num_samples": 4354,
+    "num_training_records": 65011
+  }
+}

@@ -1,0 +1,239 @@
+Loaded configuration from /workspace/China_Journal/config/config.yaml
+{
+  "random_seed": 42,
+  "data": {
+    "city": "beijing",
+    "data_dir": "/workspace/China_Journal/data",
+    "obs_len": 12,
+    "pred_len": 1
+  },
+  "model": {
+    "llm": {
+      "model_name": "Gemma-2-9B",
+      "model_path": "/datadisk",
+      "max_new_tokens": 256,
+      "temperature": 0.2,
+      "top_p": 0.8,
+      "top_k": 40,
+      "do_sample": true,
+      "use_quantization": true,
+      "use_lora": true,
+      "lora_r": 8,
+      "lora_alpha": 16,
+      "lora_dropout": 0.05
+    },
+    "rag": {
+      "top_m_samples": 5,
+      "database_path": "/workspace/China_Journal/util/rag_database",
+      "max_summary_length": 256
+    },
+    "gravity": {
+      "top_n_candidates": 3,
+      "weight": 1.0,
+      "radius": 5,
+      "grid_size": 40,
+      "weight_config_path": null
+    },
+    "prediction": {
+      "top_k_predictions": 10,
+      "time_interval": "1 hour"
+    }
+  },
+  "training": {
+    "num_epochs": 3,
+    "batch_size": 1,
+    "learning_rate": 5e-05,
+    "weight_decay": 0.01,
+    "optimizer": "adamw",
+    "max_grad_norm": 0.5,
+    "gradient_accumulation_steps": 1,
+    "use_scheduler": false,
+    "scheduler_type": "linear",
+    "warmup_steps": 100,
+    "val_every_n_epochs": 1,
+    "save_every_n_epochs": 1,
+    "early_stopping_patience": 5,
+    "output_dir": "/workspace/China_Journal/output",
+    "checkpoint_dir": "checkpoints",
+    "log_dir": "logs",
+    "log_every_n_steps": 10,
+    "verbose": false
+  },
+  "validation": {
+    "batch_size": 1,
+    "verbose": false
+  },
+  "testing": {
+    "num_samples": 10000,
+    "batch_size": 1,
+    "detailed_log": true,
+    "log_first_n_samples": 10,
+    "save_predictions": true,
+    "verbose": true
+  },
+  "rag_build": {
+    "batch_size": 32,
+    "output_dir": "/workspace/China_Journal/util/rag_database",
+    "save_faiss_index": true,
+    "overwrite": false,
+    "verbose": true
+  },
+  "detailed_debug": {
+    "enabled": true,
+    "num_samples": 10000,
+    "print_prompts": true,
+    "print_rag_results": true,
+    "print_gravity_candidates": true,
+    "print_llm_responses": true,
+    "save_debug_log": true
+  }
+}
+
+======================================================================
+MOBILITY PREDICTION TRAINER INITIALIZED
+======================================================================
+Device: cuda
+Output directory: /workspace/China_Journal/output
+Log file: /workspace/China_Journal/output/logs/training_20260108_024540.log
+======================================================================
+
+Loading datasets...
+Loading POI data from /workspace/China_Journal/data/beijing/poi.csv...
+Loaded POI data for 1600 locations
+Loading trajectory data from /workspace/China_Journal/data/beijing/train.csv...
+Loaded 30018 samples from /workspace/China_Journal/data/beijing/train.csv
+Loading POI data from /workspace/China_Journal/data/beijing/poi.csv...
+Loaded POI data for 1600 locations
+Loading trajectory data from /workspace/China_Journal/data/beijing/val.csv...
+Loaded 3196 samples from /workspace/China_Journal/data/beijing/val.csv
+Loading POI data from /workspace/China_Journal/data/beijing/poi.csv...
+Loaded POI data for 1600 locations
+Loading trajectory data from /workspace/China_Journal/data/beijing/small_test.csv...
+Loaded 98 samples from /workspace/China_Journal/data/beijing/small_test.csv
+
+======================================================================
+DATASET LOADING SUMMARY
+======================================================================
+
+======================================================================
+Dataset Statistics - BEIJING
+======================================================================
+Total samples: 30018
+Unique users: 997
+Unique locations: 1152
+Observation length: 12
+Prediction length: 1
+
+Top 10 most frequent next locations:
+  Location 1193: 644 occurrences
+  Location 1058: 566 occurrences
+  Location 1153: 379 occurrences
+  Location 148: 342 occurrences
+  Location 1057: 285 occurrences
+  Location 660: 240 occurrences
+  Location 975: 222 occurrences
+  Location 1055: 216 occurrences
+  Location 703: 209 occurrences
+  Location 1161: 197 occurrences
+
+Hourly distribution (top 5):
+  Hour 04:00: 1757 samples
+  Hour 05:00: 1747 samples
+  Hour 06:00: 1720 samples
+  Hour 03:00: 1716 samples
+  Hour 02:00: 1687 samples
+======================================================================
+
+
+======================================================================
+Dataset Statistics - BEIJING
+======================================================================
+Total samples: 3196
+Unique users: 105
+Unique locations: 382
+Observation length: 12
+Prediction length: 1
+
+Top 10 most frequent next locations:
+  Location 1058: 87 occurrences
+  Location 1193: 66 occurrences
+  Location 1055: 56 occurrences
+  Location 424: 54 occurrences
+  Location 1054: 52 occurrences
+  Location 1526: 48 occurrences
+  Location 148: 41 occurrences
+  Location 1097: 39 occurrences
+  Location 421: 38 occurrences
+  Location 1451: 38 occurrences
+
+Hourly distribution (top 5):
+  Hour 04:00: 184 samples
+  Hour 05:00: 183 samples
+  Hour 02:00: 181 samples
+  Hour 03:00: 181 samples
+  Hour 06:00: 181 samples
+======================================================================
+
+
+======================================================================
+Dataset Statistics - BEIJING
+======================================================================
+Total samples: 98
+Unique users: 62
+Unique locations: 128
+Observation length: 12
+Prediction length: 1
+
+Top 10 most frequent next locations:
+  Location 702: 5 occurrences
+  Location 975: 5 occurrences
+  Location 1494: 4 occurrences
+  Location 1059: 4 occurrences
+  Location 1203: 4 occurrences
+  Location 1572: 3 occurrences
+  Location 1245: 3 occurrences
+  Location 843: 3 occurrences
+  Location 529: 3 occurrences
+  Location 925: 3 occurrences
+
+Hourly distribution (top 5):
+  Hour 21:00: 7 samples
+  Hour 04:00: 6 samples
+  Hour 06:00: 6 samples
+  Hour 07:00: 6 samples
+  Hour 13:00: 6 samples
+======================================================================
+
+Train samples: 30018
+Validation samples: 3196
+Test samples: 98
+Initializing MobilityPredictor model...
+  LLM Model: Gemma-2-9B
+  RAG Top-M Samples: 5
+  Gravity Top-N Candidates: 3
+  Gravity Weight: 1.0
+  Gravity Weight Config: None (using default)
+  Prediction Top-K: 10
+  Prediction Time Interval: 1 hour
+  Generation params: temperature=0.2, top_p=0.8, top_k=40, do_sample=True
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:09,  3.28s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:06<00:06,  3.02s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:10<00:03,  3.59s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:13<00:00,  3.37s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:13<00:00,  3.36s/it]
+LoRA enabled: 0 trainable LLM params
+WARNING: LoRA enabled but no LoRA parameters found. Model will be fully frozen.
+Model initialized successfully
+
+======================================================================
+TESTING MODEL
+======================================================================
+Testing:   0%|          | 0/98 [00:00<?, ?it/s]Testing:   0%|          | 0/98 [00:20<?, ?it/s, Acc@1=1.0000, Acc@3=1.0000, Acc@5=1.0000, MRR@5=1.0000, ADE=0.0010]Testing:   1%|          | 1/98 [00:20<32:42, 20.24s/it, Acc@1=1.0000, Acc@3=1.0000, Acc@5=1.0000, MRR@5=1.0000, ADE=0.0010]Testing:   1%|          | 1/98 [00:44<32:42, 20.24s/it, Acc@1=1.0000, Acc@3=1.0000, Acc@5=1.0000, MRR@5=1.0000, ADE=0.0010]Testing:   2%|▏         | 2/98 [00:44<36:20, 22.72s/it, Acc@1=1.0000, Acc@3=1.0000, Acc@5=1.0000, MRR@5=1.0000, ADE=0.0010]Testing:   2%|▏         | 2/98 [01:04<36:20, 22.72s/it, Acc@1=0.6667, Acc@3=0.6667, Acc@5=0.6667, MRR@5=0.6667, ADE=2.9226]Testing:   3%|▎         | 3/98 [01:04<34:03, 21.51s/it, Acc@1=0.6667, Acc@3=0.6667, Acc@5=0.6667, MRR@5=0.6667, ADE=2.9226]Testing:   3%|▎         | 3/98 [01:23<34:03, 21.51s/it, Acc@1=0.5000, Acc@3=0.5000, Acc@5=0.5000, MRR@5=0.5000, ADE=2.7335]Testing:   4%|▍         | 4/98 [01:23<31:44, 20.26s/it, Acc@1=0.5000, Acc@3=0.5000, Acc@5=0.5000, MRR@5=0.5000, ADE=2.7335]Testing:   4%|▍         | 4/98 [01:37<31:44, 20.26s/it, Acc@1=0.4000, Acc@3=0.4000, Acc@5=0.4000, MRR@5=0.4000, ADE=2.3233]Testing:   5%|▌         | 5/98 [01:37<27:54, 18.00s/it, Acc@1=0.4000, Acc@3=0.4000, Acc@5=0.4000, MRR@5=0.4000, ADE=2.3233]Testing:   5%|▌         | 5/98 [01:52<27:54, 18.00s/it, Acc@1=0.3333, Acc@3=0.3333, Acc@5=0.3333, MRR@5=0.3333, ADE=2.0498]Testing:   6%|▌         | 6/98 [01:52<26:08, 17.04s/it, Acc@1=0.3333, Acc@3=0.3333, Acc@5=0.3333, MRR@5=0.3333, ADE=2.0498]Testing:   6%|▌         | 6/98 [02:13<26:08, 17.04s/it, Acc@1=0.4286, Acc@3=0.4286, Acc@5=0.4286, MRR@5=0.4286, ADE=1.7571]Testing:   7%|▋         | 7/98 [02:13<27:41, 18.26s/it, Acc@1=0.4286, Acc@3=0.4286, Acc@5=0.4286, MRR@5=0.4286, ADE=1.7571]Testing:   7%|▋         | 7/98 [02:27<27:41, 18.26s/it, Acc@1=0.3750, Acc@3=0.3750, Acc@5=0.3750, MRR@5=0.3750, ADE=2.1549]Testing:   8%|▊         | 8/98 [02:27<25:33, 17.04s/it, Acc@1=0.3750, Acc@3=0.3750, Acc@5=0.3750, MRR@5=0.3750, ADE=2.1549]Testing:   8%|▊         | 8/98 [02:40<25:33, 17.04s/it, Acc@1=0.3333, Acc@3=0.3333, Acc@5=0.3333, MRR@5=0.3333, ADE=2.2598]Testing:   9%|▉         | 9/98 [02:40<23:16, 15.69s/it, Acc@1=0.3333, Acc@3=0.3333, Acc@5=0.3333, MRR@5=0.3333, ADE=2.2598]Testing:   9%|▉         | 9/98 [02:57<23:16, 15.69s/it, Acc@1=0.3000, Acc@3=0.3000, Acc@5=0.3000, MRR@5=0.3000, ADE=2.9396]Testing:  10%|█         | 10/98 [02:57<23:53, 16.29s/it, Acc@1=0.3000, Acc@3=0.3000, Acc@5=0.3000, MRR@5=0.3000, ADE=2.9396]Testing:  10%|█         | 10/98 [03:16<23:53, 16.29s/it, Acc@1=0.2727, Acc@3=0.2727, Acc@5=0.2727, MRR@5=0.2727, ADE=2.7034]Testing:  11%|█         | 11/98 [03:16<24:33, 16.93s/it, Acc@1=0.2727, Acc@3=0.2727, Acc@5=0.2727, MRR@5=0.2727, ADE=2.7034]Testing:  11%|█         | 11/98 [03:33<24:33, 16.93s/it, Acc@1=0.3333, Acc@3=0.3333, Acc@5=0.3333, MRR@5=0.3333, ADE=2.4782]Testing:  12%|█▏        | 12/98 [03:33<24:24, 17.03s/it, Acc@1=0.3333, Acc@3=0.3333, Acc@5=0.3333, MRR@5=0.3333, ADE=2.4782]Testing:  12%|█▏        | 12/98 [03:49<24:24, 17.03s/it, Acc@1=0.3846, Acc@3=0.3846, Acc@5=0.3846, MRR@5=0.3846, ADE=2.2876]Testing:  13%|█▎        | 13/98 [03:49<23:40, 16.71s/it, Acc@1=0.3846, Acc@3=0.3846, Acc@5=0.3846, MRR@5=0.3846, ADE=2.2876]Testing:  13%|█▎        | 13/98 [04:05<23:40, 16.71s/it, Acc@1=0.3571, Acc@3=0.3571, Acc@5=0.3571, MRR@5=0.3571, ADE=2.1560]Testing:  14%|█▍        | 14/98 [04:05<23:08, 16.54s/it, Acc@1=0.3571, Acc@3=0.3571, Acc@5=0.3571, MRR@5=0.3571, ADE=2.1560]Testing:  14%|█▍        | 14/98 [04:24<23:08, 16.54s/it, Acc@1=0.3333, Acc@3=0.4000, Acc@5=0.4000, MRR@5=0.3556, ADE=2.0419]Testing:  15%|█▌        | 15/98 [04:24<23:50, 17.24s/it, Acc@1=0.3333, Acc@3=0.4000, Acc@5=0.4000, MRR@5=0.3556, ADE=2.0419]Testing:  15%|█▌        | 15/98 [04:39<23:50, 17.24s/it, Acc@1=0.3750, Acc@3=0.4375, Acc@5=0.4375, MRR@5=0.3958, ADE=1.9144]Testing:  16%|█▋        | 16/98 [04:39<22:32, 16.49s/it, Acc@1=0.3750, Acc@3=0.4375, Acc@5=0.4375, MRR@5=0.3958, ADE=1.9144]Testing:  16%|█▋        | 16/98 [04:55<22:32, 16.49s/it, Acc@1=0.4118, Acc@3=0.4706, Acc@5=0.4706, MRR@5=0.4314, ADE=1.8018]Testing:  17%|█▋        | 17/98 [04:55<22:14, 16.48s/it, Acc@1=0.4118, Acc@3=0.4706, Acc@5=0.4706, MRR@5=0.4314, ADE=1.8018]Testing:  17%|█▋        | 17/98 [05:09<22:14, 16.48s/it, Acc@1=0.4444, Acc@3=0.5000, Acc@5=0.5000, MRR@5=0.4630, ADE=1.7018]Testing:  18%|█▊        | 18/98 [05:09<20:47, 15.59s/it, Acc@1=0.4444, Acc@3=0.5000, Acc@5=0.5000, MRR@5=0.4630, ADE=1.7018]Testing:  18%|█▊        | 18/98 [05:24<20:47, 15.59s/it, Acc@1=0.4211, Acc@3=0.5263, Acc@5=0.5263, MRR@5=0.4649, ADE=1.6301]Testing:  19%|█▉        | 19/98 [05:24<20:27, 15.54s/it, Acc@1=0.4211, Acc@3=0.5263, Acc@5=0.5263, MRR@5=0.4649, ADE=1.6301]Testing:  19%|█▉        | 19/98 [05:40<20:27, 15.54s/it, Acc@1=0.4500, Acc@3=0.5500, Acc@5=0.5500, MRR@5=0.4917, ADE=1.5487]Testing:  20%|██        | 20/98 [05:40<20:28, 15.75s/it, Acc@1=0.4500, Acc@3=0.5500, Acc@5=0.5500, MRR@5=0.4917, ADE=1.5487]Testing:  20%|██        | 20/98 [05:56<20:28, 15.75s/it, Acc@1=0.4762, Acc@3=0.5714, Acc@5=0.5714, MRR@5=0.5159, ADE=1.4750]Testing:  21%|██▏       | 21/98 [05:56<20:05, 15.65s/it, Acc@1=0.4762, Acc@3=0.5714, Acc@5=0.5714, MRR@5=0.5159, ADE=1.4750]Testing:  21%|██▏       | 21/98 [06:10<20:05, 15.65s/it, Acc@1=0.5000, Acc@3=0.5909, Acc@5=0.5909, MRR@5=0.5379, ADE=1.4080]Testing:  22%|██▏       | 22/98 [06:10<19:12, 15.16s/it, Acc@1=0.5000, Acc@3=0.5909, Acc@5=0.5909, MRR@5=0.5379, ADE=1.4080]Testing:  22%|██▏       | 22/98 [06:29<19:12, 15.16s/it, Acc@1=0.5217, Acc@3=0.6087, Acc@5=0.6087, MRR@5=0.5580, ADE=1.3468]Testing:  23%|██▎       | 23/98 [06:29<20:29, 16.39s/it, Acc@1=0.5217, Acc@3=0.6087, Acc@5=0.6087, MRR@5=0.5580, ADE=1.3468]Testing:  23%|██▎       | 23/98 [06:49<20:29, 16.39s/it, Acc@1=0.5000, Acc@3=0.5833, Acc@5=0.5833, MRR@5=0.5347, ADE=1.3092]Testing:  24%|██▍       | 24/98 [06:49<21:33, 17.48s/it, Acc@1=0.5000, Acc@3=0.5833, Acc@5=0.5833, MRR@5=0.5347, ADE=1.3092]Testing:  24%|██▍       | 24/98 [07:04<21:33, 17.48s/it, Acc@1=0.4800, Acc@3=0.5600, Acc@5=0.5600, MRR@5=0.5133, ADE=1.2747]Testing:  26%|██▌       | 25/98 [07:04<20:12, 16.60s/it, Acc@1=0.4800, Acc@3=0.5600, Acc@5=0.5600, MRR@5=0.5133, ADE=1.2747]Testing:  26%|██▌       | 25/98 [07:18<20:12, 16.60s/it, Acc@1=0.5000, Acc@3=0.5769, Acc@5=0.5769, MRR@5=0.5321, ADE=1.2257]Testing:  27%|██▋       | 26/98 [07:18<19:13, 16.02s/it, Acc@1=0.5000, Acc@3=0.5769, Acc@5=0.5769, MRR@5=0.5321, ADE=1.2257]Testing:  27%|██▋       | 26/98 [07:32<19:13, 16.02s/it, Acc@1=0.4815, Acc@3=0.5556, Acc@5=0.5926, MRR@5=0.5216, ADE=1.2132]Testing:  28%|██▊       | 27/98 [07:32<17:59, 15.20s/it, Acc@1=0.4815, Acc@3=0.5556, Acc@5=0.5926, MRR@5=0.5216, ADE=1.2132]Testing:  28%|██▊       | 27/98 [07:52<17:59, 15.20s/it, Acc@1=0.4643, Acc@3=0.5357, Acc@5=0.5714, MRR@5=0.5030, ADE=1.2017]Testing:  29%|██▊       | 28/98 [07:52<19:40, 16.87s/it, Acc@1=0.4643, Acc@3=0.5357, Acc@5=0.5714, MRR@5=0.5030, ADE=1.2017]Testing:  29%|██▊       | 28/98 [08:13<19:40, 16.87s/it, Acc@1=0.4483, Acc@3=0.5172, Acc@5=0.5517, MRR@5=0.4856, ADE=1.3385]Testing:  30%|██▉       | 29/98 [08:13<20:47, 18.08s/it, Acc@1=0.4483, Acc@3=0.5172, Acc@5=0.5517, MRR@5=0.4856, ADE=1.3385]Testing:  30%|██▉       | 29/98 [08:30<20:47, 18.08s/it, Acc@1=0.4667, Acc@3=0.5333, Acc@5=0.5667, MRR@5=0.5028, ADE=1.2939]Testing:  31%|███       | 30/98 [08:30<20:04, 17.72s/it, Acc@1=0.4667, Acc@3=0.5333, Acc@5=0.5667, MRR@5=0.5028, ADE=1.2939]Testing:  31%|███       | 30/98 [08:54<20:04, 17.72s/it, Acc@1=0.4839, Acc@3=0.5484, Acc@5=0.5806, MRR@5=0.5188, ADE=1.2522]Testing:  32%|███▏      | 31/98 [08:54<22:00, 19.71s/it, Acc@1=0.4839, Acc@3=0.5484, Acc@5=0.5806, MRR@5=0.5188, ADE=1.2522]Testing:  32%|███▏      | 31/98 [09:13<22:00, 19.71s/it, Acc@1=0.5000, Acc@3=0.5625, Acc@5=0.5938, MRR@5=0.5339, ADE=1.2131]Testing:  33%|███▎      | 32/98 [09:13<21:14, 19.32s/it, Acc@1=0.5000, Acc@3=0.5625, Acc@5=0.5938, MRR@5=0.5339, ADE=1.2131]Testing:  33%|███▎      | 32/98 [09:29<21:14, 19.32s/it, Acc@1=0.5152, Acc@3=0.5758, Acc@5=0.6061, MRR@5=0.5480, ADE=1.1764]Testing:  34%|███▎      | 33/98 [09:29<19:56, 18.41s/it, Acc@1=0.5152, Acc@3=0.5758, Acc@5=0.6061, MRR@5=0.5480, ADE=1.1764]Testing:  34%|███▎      | 33/98 [09:52<19:56, 18.41s/it, Acc@1=0.5294, Acc@3=0.5882, Acc@5=0.6176, MRR@5=0.5613, ADE=1.1418]Testing:  35%|███▍      | 34/98 [09:52<21:00, 19.70s/it, Acc@1=0.5294, Acc@3=0.5882, Acc@5=0.6176, MRR@5=0.5613, ADE=1.1418]Testing:  35%|███▍      | 34/98 [10:07<21:00, 19.70s/it, Acc@1=0.5143, Acc@3=0.5714, Acc@5=0.6000, MRR@5=0.5452, ADE=1.1867]Testing:  36%|███▌      | 35/98 [10:07<19:16, 18.36s/it, Acc@1=0.5143, Acc@3=0.5714, Acc@5=0.6000, MRR@5=0.5452, ADE=1.1867]Testing:  36%|███▌      | 35/98 [10:24<19:16, 18.36s/it, Acc@1=0.5000, Acc@3=0.5833, Acc@5=0.6111, MRR@5=0.5440, ADE=1.1632]Testing:  37%|███▋      | 36/98 [10:24<18:30, 17.91s/it, Acc@1=0.5000, Acc@3=0.5833, Acc@5=0.6111, MRR@5=0.5440, ADE=1.1632]Testing:  37%|███▋      | 36/98 [10:39<18:30, 17.91s/it, Acc@1=0.4865, Acc@3=0.5676, Acc@5=0.5946, MRR@5=0.5293, ADE=1.1410]Testing:  38%|███▊      | 37/98 [10:39<17:17, 17.00s/it, Acc@1=0.4865, Acc@3=0.5676, Acc@5=0.5946, MRR@5=0.5293, ADE=1.1410]Testing:  38%|███▊      | 37/98 [11:22<17:17, 17.00s/it, Acc@1=0.5000, Acc@3=0.5789, Acc@5=0.6053, MRR@5=0.5417, ADE=1.1110]Testing:  39%|███▉      | 38/98 [11:22<24:58, 24.97s/it, Acc@1=0.5000, Acc@3=0.5789, Acc@5=0.6053, MRR@5=0.5417, ADE=1.1110]Testing:  39%|███▉      | 38/98 [11:40<24:58, 24.97s/it, Acc@1=0.5128, Acc@3=0.5897, Acc@5=0.6154, MRR@5=0.5534, ADE=1.0825]Testing:  40%|███▉      | 39/98 [11:40<22:22, 22.75s/it, Acc@1=0.5128, Acc@3=0.5897, Acc@5=0.6154, MRR@5=0.5534, ADE=1.0825]Testing:  40%|███▉      | 39/98 [11:53<22:22, 22.75s/it, Acc@1=0.5250, Acc@3=0.6000, Acc@5=0.6250, MRR@5=0.5646, ADE=1.0555]Testing:  41%|████      | 40/98 [11:53<19:11, 19.86s/it, Acc@1=0.5250, Acc@3=0.6000, Acc@5=0.6250, MRR@5=0.5646, ADE=1.0555]Testing:  41%|████      | 40/98 [12:08<19:11, 19.86s/it, Acc@1=0.5366, Acc@3=0.6098, Acc@5=0.6341, MRR@5=0.5752, ADE=1.0298]Testing:  42%|████▏     | 41/98 [12:08<17:25, 18.35s/it, Acc@1=0.5366, Acc@3=0.6098, Acc@5=0.6341, MRR@5=0.5752, ADE=1.0298]Testing:  42%|████▏     | 41/98 [12:26<17:25, 18.35s/it, Acc@1=0.5238, Acc@3=0.5952, Acc@5=0.6429, MRR@5=0.5675, ADE=1.0158]Testing:  43%|████▎     | 42/98 [12:26<17:05, 18.31s/it, Acc@1=0.5238, Acc@3=0.5952, Acc@5=0.6429, MRR@5=0.5675, ADE=1.0158]Testing:  43%|████▎     | 42/98 [12:46<17:05, 18.31s/it, Acc@1=0.5116, Acc@3=0.5814, Acc@5=0.6279, MRR@5=0.5543, ADE=1.0242]Testing:  44%|████▍     | 43/98 [12:46<17:06, 18.67s/it, Acc@1=0.5116, Acc@3=0.5814, Acc@5=0.6279, MRR@5=0.5543, ADE=1.0242]Testing:  44%|████▍     | 43/98 [13:00<17:06, 18.67s/it, Acc@1=0.5000, Acc@3=0.5682, Acc@5=0.6136, MRR@5=0.5417, ADE=1.0626]Testing:  45%|████▍     | 44/98 [13:00<15:32, 17.27s/it, Acc@1=0.5000, Acc@3=0.5682, Acc@5=0.6136, MRR@5=0.5417, ADE=1.0626]Testing:  45%|████▍     | 44/98 [13:16<15:32, 17.27s/it, Acc@1=0.4889, Acc@3=0.5778, Acc@5=0.6222, MRR@5=0.5370, ADE=1.0488]Testing:  46%|████▌     | 45/98 [13:16<15:03, 17.06s/it, Acc@1=0.4889, Acc@3=0.5778, Acc@5=0.6222, MRR@5=0.5370, ADE=1.0488]Testing:  46%|████▌     | 45/98 [13:31<15:03, 17.06s/it, Acc@1=0.5000, Acc@3=0.5870, Acc@5=0.6304, MRR@5=0.5471, ADE=1.0261]Testing:  47%|████▋     | 46/98 [13:31<14:05, 16.27s/it, Acc@1=0.5000, Acc@3=0.5870, Acc@5=0.6304, MRR@5=0.5471, ADE=1.0261]Testing:  47%|████▋     | 46/98 [13:46<14:05, 16.27s/it, Acc@1=0.5106, Acc@3=0.5957, Acc@5=0.6383, MRR@5=0.5567, ADE=1.0043]Testing:  48%|████▊     | 47/98 [13:46<13:40, 16.08s/it, Acc@1=0.5106, Acc@3=0.5957, Acc@5=0.6383, MRR@5=0.5567, ADE=1.0043]Testing:  48%|████▊     | 47/98 [14:01<13:40, 16.08s/it, Acc@1=0.5000, Acc@3=0.5833, Acc@5=0.6250, MRR@5=0.5451, ADE=1.0066]Testing:  49%|████▉     | 48/98 [14:01<13:09, 15.79s/it, Acc@1=0.5000, Acc@3=0.5833, Acc@5=0.6250, MRR@5=0.5451, ADE=1.0066]Testing:  49%|████▉     | 48/98 [14:18<13:09, 15.79s/it, Acc@1=0.4898, Acc@3=0.5918, Acc@5=0.6327, MRR@5=0.5442, ADE=0.9930]Testing:  50%|█████     | 49/98 [14:18<13:01, 15.95s/it, Acc@1=0.4898, Acc@3=0.5918, Acc@5=0.6327, MRR@5=0.5442, ADE=0.9930]Testing:  50%|█████     | 49/98 [14:36<13:01, 15.95s/it, Acc@1=0.5000, Acc@3=0.6000, Acc@5=0.6400, MRR@5=0.5533, ADE=0.9731]Testing:  51%|█████     | 50/98 [14:36<13:24, 16.77s/it, Acc@1=0.5000, Acc@3=0.6000, Acc@5=0.6400, MRR@5=0.5533, ADE=0.9731]Testing:  51%|█████     | 50/98 [14:51<13:24, 16.77s/it, Acc@1=0.5098, Acc@3=0.6078, Acc@5=0.6471, MRR@5=0.5621, ADE=0.9541]Testing:  52%|█████▏    | 51/98 [14:51<12:43, 16.25s/it, Acc@1=0.5098, Acc@3=0.6078, Acc@5=0.6471, MRR@5=0.5621, ADE=0.9541]Testing:  52%|█████▏    | 51/98 [15:10<12:43, 16.25s/it, Acc@1=0.5192, Acc@3=0.6154, Acc@5=0.6538, MRR@5=0.5705, ADE=0.9357]Testing:  53%|█████▎    | 52/98 [15:10<12:56, 16.89s/it, Acc@1=0.5192, Acc@3=0.6154, Acc@5=0.6538, MRR@5=0.5705, ADE=0.9357]Testing:  53%|█████▎    | 52/98 [15:24<12:56, 16.89s/it, Acc@1=0.5094, Acc@3=0.6038, Acc@5=0.6604, MRR@5=0.5645, ADE=0.9265]Testing:  54%|█████▍    | 53/98 [15:24<11:58, 15.97s/it, Acc@1=0.5094, Acc@3=0.6038, Acc@5=0.6604, MRR@5=0.5645, ADE=0.9265]Testing:  54%|█████▍    | 53/98 [15:39<11:58, 15.97s/it, Acc@1=0.5185, Acc@3=0.6111, Acc@5=0.6667, MRR@5=0.5725, ADE=0.9093]Testing:  55%|█████▌    | 54/98 [15:39<11:34, 15.79s/it, Acc@1=0.5185, Acc@3=0.6111, Acc@5=0.6667, MRR@5=0.5725, ADE=0.9093]Testing:  55%|█████▌    | 54/98 [16:01<11:34, 15.79s/it, Acc@1=0.5273, Acc@3=0.6182, Acc@5=0.6727, MRR@5=0.5803, ADE=0.8928]Testing:  56%|█████▌    | 55/98 [16:01<12:39, 17.67s/it, Acc@1=0.5273, Acc@3=0.6182, Acc@5=0.6727, MRR@5=0.5803, ADE=0.8928]Testing:  56%|█████▌    | 55/98 [16:22<12:39, 17.67s/it, Acc@1=0.5357, Acc@3=0.6250, Acc@5=0.6786, MRR@5=0.5878, ADE=0.8769]Testing:  57%|█████▋    | 56/98 [16:22<13:03, 18.65s/it, Acc@1=0.5357, Acc@3=0.6250, Acc@5=0.6786, MRR@5=0.5878, ADE=0.8769]Testing:  57%|█████▋    | 56/98 [17:05<13:03, 18.65s/it, Acc@1=0.5439, Acc@3=0.6316, Acc@5=0.6842, MRR@5=0.5950, ADE=0.8615]Testing:  58%|█████▊    | 57/98 [17:05<17:40, 25.87s/it, Acc@1=0.5439, Acc@3=0.6316, Acc@5=0.6842, MRR@5=0.5950, ADE=0.8615]Testing:  58%|█████▊    | 57/98 [17:20<17:40, 25.87s/it, Acc@1=0.5345, Acc@3=0.6207, Acc@5=0.6724, MRR@5=0.5848, ADE=0.8563]Testing:  59%|█████▉    | 58/98 [17:20<15:09, 22.73s/it, Acc@1=0.5345, Acc@3=0.6207, Acc@5=0.6724, MRR@5=0.5848, ADE=0.8563]Testing:  59%|█████▉    | 58/98 [17:35<15:09, 22.73s/it, Acc@1=0.5254, Acc@3=0.6102, Acc@5=0.6610, MRR@5=0.5749, ADE=0.8580]Testing:  60%|██████    | 59/98 [17:35<13:16, 20.42s/it, Acc@1=0.5254, Acc@3=0.6102, Acc@5=0.6610, MRR@5=0.5749, ADE=0.8580]Testing:  60%|██████    | 59/98 [17:56<13:16, 20.42s/it, Acc@1=0.5167, Acc@3=0.6000, Acc@5=0.6500, MRR@5=0.5653, ADE=0.9562]Testing:  61%|██████    | 60/98 [17:56<12:56, 20.44s/it, Acc@1=0.5167, Acc@3=0.6000, Acc@5=0.6500, MRR@5=0.5653, ADE=0.9562]Testing:  61%|██████    | 60/98 [18:09<12:56, 20.44s/it, Acc@1=0.5246, Acc@3=0.6066, Acc@5=0.6557, MRR@5=0.5724, ADE=0.9405]Testing:  62%|██████▏   | 61/98 [18:09<11:18, 18.33s/it, Acc@1=0.5246, Acc@3=0.6066, Acc@5=0.6557, MRR@5=0.5724, ADE=0.9405]Testing:  62%|██████▏   | 61/98 [18:24<11:18, 18.33s/it, Acc@1=0.5323, Acc@3=0.6129, Acc@5=0.6613, MRR@5=0.5793, ADE=0.9254]Testing:  63%|██████▎   | 62/98 [18:24<10:21, 17.26s/it, Acc@1=0.5323, Acc@3=0.6129, Acc@5=0.6613, MRR@5=0.5793, ADE=0.9254]Testing:  63%|██████▎   | 62/98 [18:45<10:21, 17.26s/it, Acc@1=0.5238, Acc@3=0.6032, Acc@5=0.6508, MRR@5=0.5701, ADE=0.9258]Testing:  64%|██████▍   | 63/98 [18:45<10:47, 18.49s/it, Acc@1=0.5238, Acc@3=0.6032, Acc@5=0.6508, MRR@5=0.5701, ADE=0.9258]Testing:  64%|██████▍   | 63/98 [19:06<10:47, 18.49s/it, Acc@1=0.5312, Acc@3=0.6094, Acc@5=0.6562, MRR@5=0.5768, ADE=0.9113]Testing:  65%|██████▌   | 64/98 [19:06<10:57, 19.33s/it, Acc@1=0.5312, Acc@3=0.6094, Acc@5=0.6562, MRR@5=0.5768, ADE=0.9113]Testing:  65%|██████▌   | 64/98 [19:28<10:57, 19.33s/it, Acc@1=0.5385, Acc@3=0.6154, Acc@5=0.6615, MRR@5=0.5833, ADE=0.8973]Testing:  66%|██████▋   | 65/98 [19:28<11:00, 20.01s/it, Acc@1=0.5385, Acc@3=0.6154, Acc@5=0.6615, MRR@5=0.5833, ADE=0.8973]Testing:  66%|██████▋   | 65/98 [19:48<11:00, 20.01s/it, Acc@1=0.5303, Acc@3=0.6061, Acc@5=0.6515, MRR@5=0.5745, ADE=0.9682]Testing:  67%|██████▋   | 66/98 [19:48<10:41, 20.06s/it, Acc@1=0.5303, Acc@3=0.6061, Acc@5=0.6515, MRR@5=0.5745, ADE=0.9682]Testing:  67%|██████▋   | 66/98 [20:03<10:41, 20.06s/it, Acc@1=0.5224, Acc@3=0.5970, Acc@5=0.6418, MRR@5=0.5659, ADE=0.9589]Testing:  68%|██████▊   | 67/98 [20:03<09:29, 18.37s/it, Acc@1=0.5224, Acc@3=0.5970, Acc@5=0.6418, MRR@5=0.5659, ADE=0.9589]Testing:  68%|██████▊   | 67/98 [20:18<09:29, 18.37s/it, Acc@1=0.5294, Acc@3=0.6029, Acc@5=0.6471, MRR@5=0.5723, ADE=0.9448]Testing:  69%|██████▉   | 68/98 [20:18<08:41, 17.39s/it, Acc@1=0.5294, Acc@3=0.6029, Acc@5=0.6471, MRR@5=0.5723, ADE=0.9448]Testing:  69%|██████▉   | 68/98 [20:34<08:41, 17.39s/it, Acc@1=0.5217, Acc@3=0.6087, Acc@5=0.6522, MRR@5=0.5713, ADE=0.9360]Testing:  70%|███████   | 69/98 [20:34<08:10, 16.93s/it, Acc@1=0.5217, Acc@3=0.6087, Acc@5=0.6522, MRR@5=0.5713, ADE=0.9360]Testing:  70%|███████   | 69/98 [20:48<08:10, 16.93s/it, Acc@1=0.5143, Acc@3=0.6000, Acc@5=0.6429, MRR@5=0.5631, ADE=0.9620]Testing:  71%|███████▏  | 70/98 [20:48<07:35, 16.27s/it, Acc@1=0.5143, Acc@3=0.6000, Acc@5=0.6429, MRR@5=0.5631, ADE=0.9620]Testing:  71%|███████▏  | 70/98 [21:06<07:35, 16.27s/it, Acc@1=0.5211, Acc@3=0.6056, Acc@5=0.6479, MRR@5=0.5692, ADE=0.9485]Testing:  72%|███████▏  | 71/98 [21:06<07:33, 16.79s/it, Acc@1=0.5211, Acc@3=0.6056, Acc@5=0.6479, MRR@5=0.5692, ADE=0.9485]Testing:  72%|███████▏  | 71/98 [21:23<07:33, 16.79s/it, Acc@1=0.5278, Acc@3=0.6111, Acc@5=0.6528, MRR@5=0.5752, ADE=0.9353]Testing:  73%|███████▎  | 72/98 [21:23<07:16, 16.80s/it, Acc@1=0.5278, Acc@3=0.6111, Acc@5=0.6528, MRR@5=0.5752, ADE=0.9353]Testing:  73%|███████▎  | 72/98 [21:42<07:16, 16.80s/it, Acc@1=0.5205, Acc@3=0.6027, Acc@5=0.6438, MRR@5=0.5674, ADE=0.9459]Testing:  74%|███████▍  | 73/98 [21:42<07:14, 17.38s/it, Acc@1=0.5205, Acc@3=0.6027, Acc@5=0.6438, MRR@5=0.5674, ADE=0.9459]Testing:  74%|███████▍  | 73/98 [21:56<07:14, 17.38s/it, Acc@1=0.5270, Acc@3=0.6081, Acc@5=0.6486, MRR@5=0.5732, ADE=0.9331]Testing:  76%|███████▌  | 74/98 [21:56<06:33, 16.40s/it, Acc@1=0.5270, Acc@3=0.6081, Acc@5=0.6486, MRR@5=0.5732, ADE=0.9331]Testing:  76%|███████▌  | 74/98 [22:09<06:33, 16.40s/it, Acc@1=0.5333, Acc@3=0.6133, Acc@5=0.6533, MRR@5=0.5789, ADE=0.9207]Testing:  77%|███████▋  | 75/98 [22:09<05:56, 15.51s/it, Acc@1=0.5333, Acc@3=0.6133, Acc@5=0.6533, MRR@5=0.5789, ADE=0.9207]Testing:  77%|███████▋  | 75/98 [22:24<05:56, 15.51s/it, Acc@1=0.5263, Acc@3=0.6053, Acc@5=0.6447, MRR@5=0.5713, ADE=0.9232]Testing:  78%|███████▊  | 76/98 [22:24<05:33, 15.15s/it, Acc@1=0.5263, Acc@3=0.6053, Acc@5=0.6447, MRR@5=0.5713, ADE=0.9232]Testing:  78%|███████▊  | 76/98 [22:42<05:33, 15.15s/it, Acc@1=0.5195, Acc@3=0.5974, Acc@5=0.6364, MRR@5=0.5639, ADE=0.9257]Testing:  79%|███████▊  | 77/98 [22:42<05:39, 16.19s/it, Acc@1=0.5195, Acc@3=0.5974, Acc@5=0.6364, MRR@5=0.5639, ADE=0.9257]Testing:  79%|███████▊  | 77/98 [22:58<05:39, 16.19s/it, Acc@1=0.5128, Acc@3=0.5897, Acc@5=0.6282, MRR@5=0.5566, ADE=0.9261]Testing:  80%|███████▉  | 78/98 [22:58<05:18, 15.91s/it, Acc@1=0.5128, Acc@3=0.5897, Acc@5=0.6282, MRR@5=0.5566, ADE=0.9261]Testing:  80%|███████▉  | 78/98 [23:14<05:18, 15.91s/it, Acc@1=0.5063, Acc@3=0.5823, Acc@5=0.6203, MRR@5=0.5496, ADE=0.9264]Testing:  81%|████████  | 79/98 [23:14<05:04, 16.02s/it, Acc@1=0.5063, Acc@3=0.5823, Acc@5=0.6203, MRR@5=0.5496, ADE=0.9264]Testing:  81%|████████  | 79/98 [23:34<05:04, 16.02s/it, Acc@1=0.5125, Acc@3=0.5875, Acc@5=0.6250, MRR@5=0.5552, ADE=0.9149]Testing:  82%|████████▏ | 80/98 [23:34<05:09, 17.17s/it, Acc@1=0.5125, Acc@3=0.5875, Acc@5=0.6250, MRR@5=0.5552, ADE=0.9149]Testing:  82%|████████▏ | 80/98 [23:55<05:09, 17.17s/it, Acc@1=0.5185, Acc@3=0.5926, Acc@5=0.6296, MRR@5=0.5607, ADE=0.9036]Testing:  83%|████████▎ | 81/98 [23:55<05:11, 18.33s/it, Acc@1=0.5185, Acc@3=0.5926, Acc@5=0.6296, MRR@5=0.5607, ADE=0.9036]Testing:  83%|████████▎ | 81/98 [24:13<05:11, 18.33s/it, Acc@1=0.5122, Acc@3=0.5854, Acc@5=0.6220, MRR@5=0.5539, ADE=0.8967]Testing:  84%|████████▎ | 82/98 [24:13<04:53, 18.31s/it, Acc@1=0.5122, Acc@3=0.5854, Acc@5=0.6220, MRR@5=0.5539, ADE=0.8967]Testing:  84%|████████▎ | 82/98 [24:31<04:53, 18.31s/it, Acc@1=0.5181, Acc@3=0.5904, Acc@5=0.6265, MRR@5=0.5592, ADE=0.8859]Testing:  85%|████████▍ | 83/98 [24:31<04:35, 18.35s/it, Acc@1=0.5181, Acc@3=0.5904, Acc@5=0.6265, MRR@5=0.5592, ADE=0.8859]Testing:  85%|████████▍ | 83/98 [24:45<04:35, 18.35s/it, Acc@1=0.5238, Acc@3=0.5952, Acc@5=0.6310, MRR@5=0.5645, ADE=0.8754]Testing:  86%|████████▌ | 84/98 [24:45<03:54, 16.78s/it, Acc@1=0.5238, Acc@3=0.5952, Acc@5=0.6310, MRR@5=0.5645, ADE=0.8754]Testing:  86%|████████▌ | 84/98 [25:01<03:54, 16.78s/it, Acc@1=0.5176, Acc@3=0.5882, Acc@5=0.6353, MRR@5=0.5602, ADE=0.8691]Testing:  87%|████████▋ | 85/98 [25:01<03:38, 16.80s/it, Acc@1=0.5176, Acc@3=0.5882, Acc@5=0.6353, MRR@5=0.5602, ADE=0.8691]Testing:  87%|████████▋ | 85/98 [25:16<03:38, 16.80s/it, Acc@1=0.5116, Acc@3=0.5814, Acc@5=0.6279, MRR@5=0.5537, ADE=0.9437]Testing:  88%|████████▊ | 86/98 [25:16<03:15, 16.25s/it, Acc@1=0.5116, Acc@3=0.5814, Acc@5=0.6279, MRR@5=0.5537, ADE=0.9437]Testing:  88%|████████▊ | 86/98 [25:38<03:15, 16.25s/it, Acc@1=0.5057, Acc@3=0.5747, Acc@5=0.6207, MRR@5=0.5473, ADE=0.9796]Testing:  89%|████████▉ | 87/98 [25:38<03:16, 17.86s/it, Acc@1=0.5057, Acc@3=0.5747, Acc@5=0.6207, MRR@5=0.5473, ADE=0.9796]Testing:  89%|████████▉ | 87/98 [25:58<03:16, 17.86s/it, Acc@1=0.5114, Acc@3=0.5795, Acc@5=0.6250, MRR@5=0.5525, ADE=0.9684]Testing:  90%|████████▉ | 88/98 [25:58<03:05, 18.53s/it, Acc@1=0.5114, Acc@3=0.5795, Acc@5=0.6250, MRR@5=0.5525, ADE=0.9684]Testing:  90%|████████▉ | 88/98 [26:14<03:05, 18.53s/it, Acc@1=0.5169, Acc@3=0.5843, Acc@5=0.6292, MRR@5=0.5575, ADE=0.9576]Testing:  91%|█████████ | 89/98 [26:14<02:39, 17.67s/it, Acc@1=0.5169, Acc@3=0.5843, Acc@5=0.6292, MRR@5=0.5575, ADE=0.9576]Testing:  91%|█████████ | 89/98 [26:30<02:39, 17.67s/it, Acc@1=0.5111, Acc@3=0.5778, Acc@5=0.6333, MRR@5=0.5535, ADE=0.9519]Testing:  92%|█████████▏| 90/98 [26:30<02:17, 17.25s/it, Acc@1=0.5111, Acc@3=0.5778, Acc@5=0.6333, MRR@5=0.5535, ADE=0.9519]Testing:  92%|█████████▏| 90/98 [26:45<02:17, 17.25s/it, Acc@1=0.5055, Acc@3=0.5714, Acc@5=0.6264, MRR@5=0.5474, ADE=0.9476]Testing:  93%|█████████▎| 91/98 [26:45<01:56, 16.60s/it, Acc@1=0.5055, Acc@3=0.5714, Acc@5=0.6264, MRR@5=0.5474, ADE=0.9476]Testing:  93%|█████████▎| 91/98 [27:04<01:56, 16.60s/it, Acc@1=0.5000, Acc@3=0.5652, Acc@5=0.6304, MRR@5=0.5442, ADE=0.9410]Testing:  94%|█████████▍| 92/98 [27:04<01:43, 17.25s/it, Acc@1=0.5000, Acc@3=0.5652, Acc@5=0.6304, MRR@5=0.5442, ADE=0.9410]Testing:  94%|█████████▍| 92/98 [27:24<01:43, 17.25s/it, Acc@1=0.4946, Acc@3=0.5591, Acc@5=0.6237, MRR@5=0.5384, ADE=0.9596]Testing:  95%|█████████▍| 93/98 [27:24<01:31, 18.21s/it, Acc@1=0.4946, Acc@3=0.5591, Acc@5=0.6237, MRR@5=0.5384, ADE=0.9596]Testing:  95%|█████████▍| 93/98 [27:40<01:31, 18.21s/it, Acc@1=0.4894, Acc@3=0.5532, Acc@5=0.6277, MRR@5=0.5353, ADE=0.9530]Testing:  96%|█████████▌| 94/98 [27:40<01:09, 17.30s/it, Acc@1=0.4894, Acc@3=0.5532, Acc@5=0.6277, MRR@5=0.5353, ADE=0.9530]Testing:  96%|█████████▌| 94/98 [28:02<01:09, 17.30s/it, Acc@1=0.4947, Acc@3=0.5579, Acc@5=0.6316, MRR@5=0.5402, ADE=0.9430]Testing:  97%|█████████▋| 95/98 [28:02<00:56, 18.77s/it, Acc@1=0.4947, Acc@3=0.5579, Acc@5=0.6316, MRR@5=0.5402, ADE=0.9430]Testing:  97%|█████████▋| 95/98 [28:23<00:56, 18.77s/it, Acc@1=0.5000, Acc@3=0.5625, Acc@5=0.6354, MRR@5=0.5450, ADE=0.9331]Testing:  98%|█████████▊| 96/98 [28:23<00:39, 19.65s/it, Acc@1=0.5000, Acc@3=0.5625, Acc@5=0.6354, MRR@5=0.5450, ADE=0.9331]Testing:  98%|█████████▊| 96/98 [28:44<00:39, 19.65s/it, Acc@1=0.5052, Acc@3=0.5670, Acc@5=0.6392, MRR@5=0.5497, ADE=0.9235]Testing:  99%|█████████▉| 97/98 [28:44<00:19, 19.98s/it, Acc@1=0.5052, Acc@3=0.5670, Acc@5=0.6392, MRR@5=0.5497, ADE=0.9235]Testing:  99%|█████████▉| 97/98 [29:05<00:19, 19.98s/it, Acc@1=0.5102, Acc@3=0.5714, Acc@5=0.6429, MRR@5=0.5543, ADE=0.9141]Testing: 100%|██████████| 98/98 [29:05<00:00, 20.35s/it, Acc@1=0.5102, Acc@3=0.5714, Acc@5=0.6429, MRR@5=0.5543, ADE=0.9141]Testing: 100%|██████████| 98/98 [29:05<00:00, 17.82s/it, Acc@1=0.5102, Acc@3=0.5714, Acc@5=0.6429, MRR@5=0.5543, ADE=0.9141]
+
+Test Results:
+  Acc@1: 0.5102
+  Acc@3: 0.5714
+  Acc@5: 0.6429
+  Acc@10: 0.7143
+  MRR@5: 0.5543
+  ADE: 0.9141 km
+======================================================================
+Detailed test log saved to: /workspace/China_Journal/output/logs/test_detailed_20260108_024621.log
+
+Training pipeline completed successfully!

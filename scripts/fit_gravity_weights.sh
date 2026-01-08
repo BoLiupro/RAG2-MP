@@ -2,7 +2,7 @@
 # Script to fit gravity model weights for each city
 
 # Default parameters
-CITY="beijing"
+CITY="nanchang"
 DATA_DIR="/workspace/China_Journal/data"
 OUTPUT_DIR="/workspace/China_Journal/util/gravity_weight"
 OBS_LEN=12

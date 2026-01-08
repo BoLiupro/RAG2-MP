@@ -32,12 +32,12 @@ echo "Original config backed up to: $BACKUP_CONFIG"
 echo ""
 
 # Parameter values to test
-RAG_VALUES=(1 3 5 10 15)
-RADIUS_VALUES=(3 5 10 15 20)
+RAG_VALUES=(1 3 5 10 15 20)
+RADIUS_VALUES=(3 5 15 20)
 
 # Default values when not being tested
 DEFAULT_RAG=10
-DEFAULT_RADIUS=5
+DEFAULT_RADIUS=10
 
 # Total experiments: test RAG with fixed radius + test RADIUS with fixed RAG
 TOTAL_EXPERIMENTS=$((${#RAG_VALUES[@]} + ${#RADIUS_VALUES[@]}))

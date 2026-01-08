@@ -229,6 +229,12 @@ class GravityWeightFitter:
         Returns:
             Scores tensor [batch_size, num_candidates]
         """
+        # Convert weight to tensor if it's a numpy array
+        if isinstance(weight, np.ndarray):
+            weight = torch.tensor(weight.item(), dtype=torch.float32, device=self.device)
+        elif not isinstance(weight, torch.Tensor):
+            weight = torch.tensor(weight, dtype=torch.float32, device=self.device)
+        
         batch_size, num_candidates = candidate_grid_ids.shape
         
         # Get coordinates for current grids
@@ -257,13 +263,13 @@ class GravityWeightFitter:
         # Calculate scores with new 3-step process:
         # Step 1: Calculate base score = poi_count / distance^2
         distances = torch.clamp(distances, min=0.01)  # Avoid division by zero
-        base_scores = poi_counts / (distances ** 2)
+        base_scores = poi_counts / (distances ** weight)
         
         # Step 2: Apply logarithmic smoothing
         smoothed_base_scores = torch.log1p(base_scores)
         
         # Step 3: Apply weight
-        scores = weight * smoothed_base_scores
+        scores = smoothed_base_scores
         
         # Apply fixed smoothed score for same location (base=10, log(11)≈2.4)
         same_location_smoothed = weight * torch.log1p(torch.tensor(10.0, device=self.device))

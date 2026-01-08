@@ -1,0 +1,41 @@
+{
+  "city": "nanchang",
+  "weights": {
+    "Transportation Facilities_count": 1.00625,
+    "Leisure & Entertainment_count": 1.1375,
+    "Companies & Enterprises_count": 1.1375,
+    "Healthcare_count": 1.140625,
+    "Residential_count": 1.0000000953674317,
+    "Tourist Attractions_count": 1.00625,
+    "Automotive_count": 1.1,
+    "Life Services_count": 1.05,
+    "Science & Education & Culture_count": 1.00625,
+    "Shopping & Consumer Goods_count": 1.6562500000000018,
+    "Sports & Fitness_count": 1.09375,
+    "Hotels & Accommodations_count": 1.00625,
+    "Financial Institutions_count": 1.0125,
+    "Dining & Cuisine_count": 1.1
+  },
+  "evaluation": {
+    "Transportation Facilities_count": 63.55769230769231,
+    "Leisure & Entertainment_count": 67.34615384615384,
+    "Companies & Enterprises_count": 72.38461538461539,
+    "Healthcare_count": 50.53846153846154,
+    "Residential_count": 64.67307692307692,
+    "Tourist Attractions_count": 84.90384615384616,
+    "Automotive_count": 79.51923076923077,
+    "Life Services_count": 50.5,
+    "Science & Education & Culture_count": 63.13461538461539,
+    "Shopping & Consumer Goods_count": 48.51923076923077,
+    "Sports & Fitness_count": 70.92307692307692,
+    "Hotels & Accommodations_count": 71.51923076923077,
+    "Financial Institutions_count": 79.73076923076923,
+    "Dining & Cuisine_count": 57.17307692307692
+  },
+  "metadata": {
+    "obs_len": 12,
+    "radius": 10,
+    "num_samples": 16044,
+    "num_training_records": 72818
+  }
+}

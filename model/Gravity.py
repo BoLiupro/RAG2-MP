@@ -237,12 +237,12 @@ class GravityModel:
         weight = self.weights.get(poi_category, 1.0)
         
         # Special case: staying in the same place
-        if current_grid_id == target_grid_id:
-            # Use a fixed moderate base score
-            # After log smoothing: log(1 + 10) ≈ 2.4
-            base_score = 100
-            smoothed_base = self._smooth_base_score(base_score)
-            return weight * smoothed_base
+        # if current_grid_id == target_grid_id:
+        #     # Use a fixed moderate base score
+        #     # After log smoothing: log(1 + 10) ≈ 2.4
+        #     base_score = 100
+        #     smoothed_base = self._smooth_base_score(base_score)
+        #     return weight * smoothed_base
         
         # Get POI data for the target grid
         poi_row = self.poi_data[self.poi_data['grid_id'] == target_grid_id]
@@ -267,15 +267,15 @@ class GravityModel:
             distance = 0.01
         
         # Step 1: Calculate base gravity score
-        base_score = poi_count / (distance ** 2)
+        base_score = poi_count / (distance ** weight)
         
         # Step 2: Apply logarithmic smoothing to avoid extreme values
         smoothed_base = self._smooth_base_score(base_score)
         
         # Step 3: Apply category-specific weight
-        score = weight * smoothed_base
+        # score = weight * smoothed_base
         
-        return score
+        return smoothed_base
     
     def get_candidate_locations(
         self,

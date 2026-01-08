@@ -1,0 +1,21 @@
+[2026-01-08 14:22:19] Loading datasets...
+[2026-01-08 14:23:00] Train samples: 54019
+[2026-01-08 14:23:00] Validation samples: 5016
+[2026-01-08 14:23:00] Test samples: 117
+[2026-01-08 14:23:00] Initializing MobilityPredictor model...
+[2026-01-08 14:23:00]   LLM Model: Gemma-2-9B
+[2026-01-08 14:23:00]   RAG Top-M Samples: 10
+[2026-01-08 14:23:00]   Gravity Top-N Candidates: 3
+[2026-01-08 14:23:00]   Gravity Weight: 1.0
+[2026-01-08 14:23:00]   Gravity Weight Config: None (using default)
+[2026-01-08 14:23:00]   Prediction Top-K: 10
+[2026-01-08 14:23:00]   Prediction Time Interval: 1 hour
+[2026-01-08 14:23:00]   Generation params: temperature=0.2, top_p=0.8, top_k=40, do_sample=True
+[2026-01-08 14:23:40] LoRA enabled: 0 trainable LLM params
+[2026-01-08 14:23:40] WARNING: LoRA enabled but no LoRA parameters found. Model will be fully frozen.
+[2026-01-08 14:23:40] Model initialized successfully
+[2026-01-08 14:23:40] 
+======================================================================
+[2026-01-08 14:23:40] TESTING MODEL
+[2026-01-08 14:23:40] ======================================================================
+[2026-01-08 14:23:53] Error testing sample 0: name 'score' is not defined
