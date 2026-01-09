@@ -108,18 +108,19 @@ for rag_top_m in "${RAG_VALUES[@]}"; do
             echo "✓ Test completed successfully"
             
             # Extract metrics from output
-            # Looking for lines like:
+            # Looking for lines in "Test Results:" section like:
             #   Acc@1: 0.1234
             #   Acc@3: 0.2345
             #   Acc@5: 0.3456
             #   MRR@5: 0.4567
             #   ADE: 1.2345 km
             
-            ACC1=$(grep -oP "Acc@1: \K[0-9.]+" "$TEMP_LOG" | tail -1)
-            ACC3=$(grep -oP "Acc@3: \K[0-9.]+" "$TEMP_LOG" | tail -1)
-            ACC5=$(grep -oP "Acc@5: \K[0-9.]+" "$TEMP_LOG" | tail -1)
-            MRR5=$(grep -oP "MRR@5: \K[0-9.]+" "$TEMP_LOG" | tail -1)
-            ADE=$(grep -oP "ADE: \K[0-9.]+" "$TEMP_LOG" | tail -1)
+            # Extract from "Test Results:" section only (not from progress bar)
+            ACC1=$(grep -A 10 "^Test Results:" "$TEMP_LOG" | grep -oP "^\s+Acc@1: \K[0-9.]+" | head -1)
+            ACC3=$(grep -A 10 "^Test Results:" "$TEMP_LOG" | grep -oP "^\s+Acc@3: \K[0-9.]+" | head -1)
+            ACC5=$(grep -A 10 "^Test Results:" "$TEMP_LOG" | grep -oP "^\s+Acc@5: \K[0-9.]+" | head -1)
+            MRR5=$(grep -A 10 "^Test Results:" "$TEMP_LOG" | grep -oP "^\s+MRR@5: \K[0-9.]+" | head -1)
+            ADE=$(grep -A 10 "^Test Results:" "$TEMP_LOG" | grep -oP "^\s+ADE: \K[0-9.]+" | head -1)
             
             # Default to N/A if not found
             ACC1=${ACC1:-"N/A"}
@@ -211,18 +212,19 @@ for gravity_radius in "${RADIUS_VALUES[@]}"; do
         echo "✓ Test completed successfully"
         
         # Extract metrics from output
-        # Looking for lines like:
+        # Looking for lines in "Test Results:" section like:
         #   Acc@1: 0.1234
         #   Acc@3: 0.2345
         #   Acc@5: 0.3456
         #   MRR@5: 0.4567
         #   ADE: 1.2345 km
         
-        ACC1=$(grep -oP "Acc@1: \K[0-9.]+" "$TEMP_LOG" | tail -1)
-        ACC3=$(grep -oP "Acc@3: \K[0-9.]+" "$TEMP_LOG" | tail -1)
-        ACC5=$(grep -oP "Acc@5: \K[0-9.]+" "$TEMP_LOG" | tail -1)
-        MRR5=$(grep -oP "MRR@5: \K[0-9.]+" "$TEMP_LOG" | tail -1)
-        ADE=$(grep -oP "ADE: \K[0-9.]+" "$TEMP_LOG" | tail -1)
+        # Extract from "Test Results:" section only (not from progress bar)
+        ACC1=$(grep -A 10 "^Test Results:" "$TEMP_LOG" | grep -oP "^\s+Acc@1: \K[0-9.]+" | head -1)
+        ACC3=$(grep -A 10 "^Test Results:" "$TEMP_LOG" | grep -oP "^\s+Acc@3: \K[0-9.]+" | head -1)
+        ACC5=$(grep -A 10 "^Test Results:" "$TEMP_LOG" | grep -oP "^\s+Acc@5: \K[0-9.]+" | head -1)
+        MRR5=$(grep -A 10 "^Test Results:" "$TEMP_LOG" | grep -oP "^\s+MRR@5: \K[0-9.]+" | head -1)
+        ADE=$(grep -A 10 "^Test Results:" "$TEMP_LOG" | grep -oP "^\s+ADE: \K[0-9.]+" | head -1)
         
         # Default to N/A if not found
         ACC1=${ACC1:-"N/A"}

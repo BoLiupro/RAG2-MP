@@ -1,0 +1,118 @@
+[2026-01-09 15:22:46] Loading datasets...
+[2026-01-09 15:23:09] Train samples: 30018
+[2026-01-09 15:23:09] Validation samples: 3196
+[2026-01-09 15:23:09] Test samples: 98
+[2026-01-09 15:23:09] Initializing MobilityPredictor model...
+[2026-01-09 15:23:09]   LLM Model: Llama-2-13B
+[2026-01-09 15:23:09]   RAG Top-M Samples: 3
+[2026-01-09 15:23:09]   Gravity Top-N Candidates: 3
+[2026-01-09 15:23:09]   Gravity Weight: 1.0
+[2026-01-09 15:23:09]   Gravity Weight Config: /workspace/China_Journal/util/gravity_weight/gravity_weights.json
+[2026-01-09 15:23:09]   Prediction Top-K: 10
+[2026-01-09 15:23:09]   Prediction Time Interval: 1 hour
+[2026-01-09 15:23:09]   Generation params: temperature=0.2, top_p=0.8, top_k=40, do_sample=True
+[2026-01-09 15:23:41] LoRA enabled: 0 trainable LLM params
+[2026-01-09 15:23:41] WARNING: LoRA enabled but no LoRA parameters found. Model will be fully frozen.
+[2026-01-09 15:23:41] Model initialized successfully
+[2026-01-09 15:23:41] 
+======================================================================
+[2026-01-09 15:23:41] TESTING MODEL
+[2026-01-09 15:23:41] ======================================================================
+[2026-01-09 15:23:41] Error testing sample 0: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:41] Error testing sample 1: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:41] Error testing sample 2: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:41] Error testing sample 3: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:42] Error testing sample 4: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:42] Error testing sample 5: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:42] Error testing sample 6: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:42] Error testing sample 7: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:42] Error testing sample 8: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:42] Error testing sample 9: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:42] Error testing sample 10: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:43] Error testing sample 11: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:43] Error testing sample 12: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:43] Error testing sample 13: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:43] Error testing sample 14: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:43] Error testing sample 15: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:43] Error testing sample 16: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:43] Error testing sample 17: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:43] Error testing sample 18: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:44] Error testing sample 19: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:44] Error testing sample 20: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:44] Error testing sample 21: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:44] Error testing sample 22: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:44] Error testing sample 23: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:44] Error testing sample 24: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:44] Error testing sample 25: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:45] Error testing sample 26: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:45] Error testing sample 27: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:45] Error testing sample 28: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:45] Error testing sample 29: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:45] Error testing sample 30: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:45] Error testing sample 31: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:45] Error testing sample 32: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:46] Error testing sample 33: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:46] Error testing sample 34: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:46] Error testing sample 35: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:46] Error testing sample 36: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:46] Error testing sample 37: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:46] Error testing sample 38: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:46] Error testing sample 39: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:46] Error testing sample 40: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:47] Error testing sample 41: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:47] Error testing sample 42: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:47] Error testing sample 43: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:47] Error testing sample 44: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:47] Error testing sample 45: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:47] Error testing sample 46: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:47] Error testing sample 47: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:48] Error testing sample 48: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:48] Error testing sample 49: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:48] Error testing sample 50: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:48] Error testing sample 51: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:48] Error testing sample 52: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:48] Error testing sample 53: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:48] Error testing sample 54: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:49] Error testing sample 55: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:49] Error testing sample 56: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:49] Error testing sample 57: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:49] Error testing sample 58: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:49] Error testing sample 59: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:49] Error testing sample 60: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:49] Error testing sample 61: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:50] Error testing sample 62: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:50] Error testing sample 63: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:50] Error testing sample 64: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:50] Error testing sample 65: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:50] Error testing sample 66: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:50] Error testing sample 67: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:50] Error testing sample 68: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:50] Error testing sample 69: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:51] Error testing sample 70: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:51] Error testing sample 71: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:51] Error testing sample 72: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:51] Error testing sample 73: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:51] Error testing sample 74: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:51] Error testing sample 75: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:51] Error testing sample 76: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:52] Error testing sample 77: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:52] Error testing sample 78: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:52] Error testing sample 79: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:52] Error testing sample 80: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:52] Error testing sample 81: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:52] Error testing sample 82: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:52] Error testing sample 83: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:53] Error testing sample 84: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:53] Error testing sample 85: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:53] Error testing sample 86: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:53] Error testing sample 87: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:53] Error testing sample 88: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:53] Error testing sample 89: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:53] Error testing sample 90: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:53] Error testing sample 91: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:54] Error testing sample 92: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:54] Error testing sample 93: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:54] Error testing sample 94: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:54] Error testing sample 95: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:54] Error testing sample 96: FAISS index not built. Load RAG database first.
+[2026-01-09 15:23:54] Error testing sample 97: FAISS index not built. Load RAG database first.

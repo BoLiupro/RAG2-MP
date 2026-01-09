@@ -356,7 +356,7 @@ class MobilityRAG:
             line_parts = []
             if stat['poi_types']:
                 poi_str = ", ".join(stat['poi_types'])
-                line_parts.append(f"The area type of next location is {poi_str}. ")
+                line_parts.append(f"{i}. The area type of next location is {poi_str}. ")
             else:
                 line_parts.append("The area type of next location is unknown. ")
             
@@ -366,7 +366,7 @@ class MobilityRAG:
             else:
                 line_parts.append("the distance from last location to next location is unknown")
 
-            line = " and ".join(line_parts)
+            line = " And ".join(line_parts)
 
             # if stat['timestamps']:
             #     # Analyze time patterns

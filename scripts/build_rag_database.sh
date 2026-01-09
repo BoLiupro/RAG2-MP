@@ -12,7 +12,7 @@ export PYTHONPATH="${PYTHONPATH}:/workspace/China_Journal"
 
 # Default parameters
 CONFIG_FILE="${1:-/workspace/China_Journal/config/config.yaml}"
-CITY="${2:-shenzhen}"
+CITY="${2:-beijing}"
 TARGET_CLUSTERS="${3:-100}"
 SAMPLES_PER_CLUSTER="${4:-10}"
 # MAX_TRAIN_SAMPLES="${5:-500}"

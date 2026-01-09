@@ -1,0 +1,20 @@
+[2026-01-09 02:31:11] Loading datasets...
+[2026-01-09 02:31:35] Train samples: 30018
+[2026-01-09 02:31:35] Validation samples: 3196
+[2026-01-09 02:31:35] Test samples: 98
+[2026-01-09 02:31:35] Initializing MobilityPredictor model...
+[2026-01-09 02:31:35]   LLM Model: Llama-2-7B
+[2026-01-09 02:31:35]   RAG Top-M Samples: 10
+[2026-01-09 02:31:35]   Gravity Top-N Candidates: 3
+[2026-01-09 02:31:35]   Gravity Weight: 1.0
+[2026-01-09 02:31:35]   Gravity Weight Config: /workspace/China_Journal/util/gravity_weight/gravity_weights.json
+[2026-01-09 02:31:35]   Prediction Top-K: 10
+[2026-01-09 02:31:35]   Prediction Time Interval: 1 hour
+[2026-01-09 02:31:35]   Generation params: temperature=0.2, top_p=0.8, top_k=40, do_sample=True
+[2026-01-09 02:32:52] LoRA enabled: 0 trainable LLM params
+[2026-01-09 02:32:52] WARNING: LoRA enabled but no LoRA parameters found. Model will be fully frozen.
+[2026-01-09 02:32:52] Model initialized successfully
+[2026-01-09 02:32:52] 
+======================================================================
+[2026-01-09 02:32:52] TESTING MODEL
+[2026-01-09 02:32:52] ======================================================================

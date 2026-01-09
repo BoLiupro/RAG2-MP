@@ -136,6 +136,7 @@ class DetailedMobilityTrainer:
         self.log(f"  Gravity Top-N Candidates: {gravity_top_n_candidates}")
         self.log(f"  Prediction Top-K: {top_k_predictions}")
         self.log(f"  Prediction Time Interval: {prediction_time_interval}")
+        self.log(f"  RAG Database Path: {model_config['rag']['database_path']}")
         
         self.predictor = MobilityPredictor(
             llm_model_name=llm_model_name,
@@ -143,6 +144,7 @@ class DetailedMobilityTrainer:
             city=self.config['data']['city'],
             top_k_predictions=top_k_predictions,
             rag_top_m_samples=rag_top_m_samples,
+            rag_database_path=model_config['rag']['database_path'],
             gravity_top_n_candidates=gravity_top_n_candidates,
             gravity_weight=gravity_weight,
             gravity_radius=gravity_radius,

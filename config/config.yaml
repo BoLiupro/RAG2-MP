@@ -22,7 +22,7 @@ model:
   # LLM (Large Language Model) Configuration
   # ---------------------------------------------------------------------------
   llm:
-    model_name: "Deepseek-R1-Distill-Qwen-3B"  # LLM model name
+    model_name: "Qwen-3-8B"  # LLM model name
     model_path: "/datadisk"  # Base path where LLM models are stored
     
     # Generation parameters
@@ -45,7 +45,7 @@ model:
   # RAG (Retrieval-Augmented Generation) Configuration
   # ---------------------------------------------------------------------------
   rag:
-    top_m_samples: 10  # Number of similar historical samples to retrieve
+    top_m_samples: 3  # Number of similar historical samples to retrieve
     database_path: "/workspace/China_Journal/util/rag_database"  # RAG database directory
     max_summary_length: 256  # Maximum summary length in tokens
   
@@ -57,7 +57,7 @@ model:
     weight: 1.0  # Default weight parameter (used if no weight_config_path or category-specific weights)
     radius: 10  # Search radius in grid units
     grid_size: 40  # Grid system size (40x40 = 1600 grids)
-    weight_config_path: /workspace/China_Journal/util/gravity_weight/gravity_weights_${data.city}.json  # Path to fitted weights JSON file (optional, e.g., "/workspace/China_Journal/util/gravity_weight/gravity_weights_beijing.json")
+    weight_config_path: /workspace/China_Journal/util/gravity_weight/gravity_weights.json  # Path to fitted weights JSON file (optional, e.g., "/workspace/China_Journal/util/gravity_weight/gravity_weights_beijing.json")
     # If weight_config_path is provided and file exists, it will override the default weight parameter
     # Fitted weights can be generated using: bash scripts/fit_gravity_weights.sh --city beijing
   
@@ -141,7 +141,7 @@ rag_build:
 # ============================================================================
 detailed_debug:
   enabled: true  # Enable detailed debugging mode
-  num_samples: 10000
+  num_samples: 10
   print_prompts: true  # Print all prompts sent to LLM
   print_rag_results: true  # Print RAG retrieval results
   print_gravity_candidates: true  # Print gravity model candidates

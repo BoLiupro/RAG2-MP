@@ -44,6 +44,7 @@ class RAGDatabaseBuilder:
         city: str,
         output_dir: str = "/workspace/China_Journal/util/rag_database",
         target_clusters: int = 1000,
+        model_name: str = "",
         samples_per_cluster: int = 10
     ):
         """
@@ -58,7 +59,8 @@ class RAGDatabaseBuilder:
         """
         self.config = config
         self.city = city
-        self.output_dir = os.path.join(output_dir, city)
+        self.model_name = model_name
+        self.output_dir = os.path.join(output_dir,self.model_name,city)
         self.target_clusters = target_clusters
         self.samples_per_cluster = samples_per_cluster
         
@@ -645,6 +647,12 @@ def main():
         default=None,
         help='Maximum training samples to use (None = all)'
     )
+    parser.add_argument(
+        '--model_name',
+        type=str,
+        default='Qwen-3-8B',
+        help='LLM model name for embedding generation'
+    )
     
     args = parser.parse_args()
     
@@ -666,6 +674,7 @@ def main():
     # Create builder
     builder = RAGDatabaseBuilder(
         config=config,
+        model_name=args.model_name,
         city=args.city,
         target_clusters=args.target_clusters,
         samples_per_cluster=args.samples_per_cluster
