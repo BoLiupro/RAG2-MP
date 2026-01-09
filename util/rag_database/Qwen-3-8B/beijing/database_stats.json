@@ -1,0 +1,6 @@
+{
+  "city": "beijing",
+  "n_samples": 50,
+  "embedding_dim": 4096,
+  "timestamp": "2026-01-09 17:16:37"
+}

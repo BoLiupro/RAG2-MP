@@ -441,7 +441,7 @@ Output format:
                 response = llm_response.strip()
 
             # Clean up the response
-            llm_response = llm_response.strip()
+            llm_response = response.strip()
             
             if print_prompt:
                 print(f"\n{'='*70}")
