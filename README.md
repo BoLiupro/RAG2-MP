@@ -43,7 +43,7 @@ conda activate rag2-mp
 ```
 
 ### 2. 准备数据和 RAG 数据库
-相关的检索数据库已经存在 `util/rag_database/` 下面（以 Gemma、Llama、Qwen 进行了构建）。
+相关的检索数据库存在 `util/rag_database/` 下面（以 Gemma、Llama、Qwen 进行了构建）。
 你也可以利用重力拟合脚本来自定义各城市的区域连接权重：
 ```bash
 python util/fit_gravity_weight.py
@@ -62,4 +62,4 @@ python trainer/trainer.py --config config/config.yaml
 python trainer/detailed_trainer.py --config config/config.yaml
 ```
 
-所有的微调 Checkpoint、训练日志以及指标 (Metrics) 都会按超参数保存在 `output/` 文件夹下游 (如 `output/logs/hyper/`)中。
+所有的微调 Checkpoint、训练日志以及指标 (Metrics) 都会按超参数保存在 `output/` 文件夹下游中。
